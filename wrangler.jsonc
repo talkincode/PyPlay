@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pyplay",
+  "compatibility_date": "2026-09-25",
+  // Static site only: no Worker script. Headers (COOP/COEP, caching) come
+  // from dist/_headers, which only applies to static assets — if a Worker
+  // script is ever added, it must set the same headers itself.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "pyplay.talkincode.net", "custom_domain": true }],
+  "workers_dev": false
+}

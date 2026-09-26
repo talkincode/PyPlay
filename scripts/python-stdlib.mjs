@@ -1,0 +1,179 @@
+/**
+ * PyPlay's trimmed Python standard library (see README "Python 裁剪规格").
+ *
+ * The spec is TEACHING_MODULES below: the modules a PyPlay program may
+ * import. Everything they (and PyPlay's own runtime + Pyodide's bootstrap)
+ * actually load is discovered by running real Pyodide in Node, and recorded
+ * in python/stdlib-manifest.json — the reviewed, committed result.
+ *
+ *   node scripts/python-stdlib.mjs --write   recompute the manifest
+ *   node scripts/python-stdlib.mjs --check   fail if the manifest is stale
+ *
+ * prepare-runtime.mjs builds the shipped python_stdlib.zip from the manifest.
+ */
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { readZip, writeZip } from "./zip.mjs";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const require = createRequire(import.meta.url);
+export const PYODIDE_DIR = dirname(require.resolve("pyodide/package.json"));
+export const MANIFEST_PATH = join(ROOT, "python/stdlib-manifest.json");
+
+/** Modules kids may `import`. Adding one here is a product decision. */
+export const TEACHING_MODULES = [
+  "turtle",
+  "random",
+  "math",
+  "cmath",
+  "time",
+  "datetime",
+  "calendar",
+  "string",
+  "textwrap",
+  "re",
+  "json",
+  "collections",
+  "itertools",
+  "functools",
+  "operator",
+  "copy",
+  "heapq",
+  "bisect",
+  "fractions",
+  "decimal",
+  "statistics",
+  "dataclasses",
+  "enum",
+  "typing",
+];
+
+/** Programs run during discovery so lazily imported modules are found. */
+const SMOKE_PROGRAMS = [
+  // turtle end-to-end through PyPlay's tkinter stand-in
+  `import turtle
+t = turtle.Turtle()
+t.speed(0); t.color("red", "yellow"); t.begin_fill()
+for _ in range(5):
+    t.forward(50); t.right(144)
+t.end_fill(); t.dot(10); t.write("hi", align="center", font=("Arial", 12, "bold"))
+s = turtle.Screen(); s.bgcolor("light blue"); s.onkey(lambda: None, "Up"); s.listen()
+s.ontimer(lambda: None, 10); turtle.done()`,
+  // error reporting paths (tracebacks, suggestions)
+  "prnt('x')",
+  "def f(n):\n    return f(n + 1)\nf(0)",
+  "x = 1 +",
+  "import no_such_module",
+  "print(f'{3.14159:.2f} {10**20} {[1, 2][5]}')",
+];
+
+const HOST_STUB = `
+import types, sys
+h = types.ModuleType("_pyplay_host")
+h.emit = lambda cmd: None
+h.flush = lambda: None
+h.sleep = lambda ms: None
+def _wait(timeout):
+    if timeout is None:
+        raise KeyboardInterrupt  # mainloop with nothing left to do: "Stop"
+    return None
+h.wait_event = _wait
+h.measure_text = lambda text, font: (len(text) * 8, 12)
+h.ask_string = lambda title, prompt: None
+h.screen_size = lambda: (1280, 800)
+sys.modules["_pyplay_host"] = h
+`;
+
+async function discover() {
+  const { loadPyodide } = await import("pyodide");
+  const py = await loadPyodide({ indexURL: `${PYODIDE_DIR}/` });
+  const runtime = "/home/pyodide/pyplay";
+  py.FS.mkdirTree(`${runtime}/tkinter`);
+  for (const f of [
+    "turtle.py",
+    "_pyplay_run.py",
+    "tkinter/__init__.py",
+    "tkinter/simpledialog.py",
+    "tkinter/tk_colors.json",
+  ]) {
+    py.FS.writeFile(`${runtime}/${f}`, readFileSync(join(ROOT, "python", f)));
+  }
+  py.setStdout({ batched: () => {} });
+  py.setStderr({ batched: () => {} });
+  py.globals.set("SMOKE", py.toPy(SMOKE_PROGRAMS));
+  py.globals.set("MODULES", py.toPy(TEACHING_MODULES));
+  const json = py.runPython(`
+${HOST_STUB}
+import sys, json
+sys.path.insert(0, "${runtime}")
+import _pyplay_run
+for name in MODULES:
+    __import__(name)
+results = [_pyplay_run.run(src)["status"] for src in SMOKE]
+assert results[0] == "stopped", results
+prefix = "/lib/python%d%d.zip/" % sys.version_info[:2]
+files = sorted({m.__file__[len(prefix):] for m in list(sys.modules.values())
+                if getattr(m, "__file__", None) and m.__file__.startswith(prefix)})
+json.dumps({"files": files, "python": sys.version.split()[0]})
+`);
+  return JSON.parse(json);
+}
+
+export function buildTrimmedZip(files) {
+  const source = readFileSync(join(PYODIDE_DIR, "python_stdlib.zip"));
+  const keep = new Set(files);
+  // keep directory entries for kept packages so zipimport sees them as dirs
+  for (const f of files) {
+    const parts = f.split("/");
+    for (let i = 1; i < parts.length; i++) keep.add(`${parts.slice(0, i).join("/")}/`);
+  }
+  const all = readZip(source);
+  const entries = all.filter((e) => keep.has(e.name));
+  const missing = files.filter((f) => !entries.some((e) => e.name === f));
+  if (missing.length) throw new Error(`stdlib: files missing from Pyodide's zip: ${missing.join(", ")}`);
+  return { zip: writeZip(entries), sourceBytes: source.length, sourceEntries: all.length };
+}
+
+async function computeManifest() {
+  const { files, python } = await discover();
+  const pyodideVersion = JSON.parse(readFileSync(join(PYODIDE_DIR, "package.json"), "utf8")).version;
+  const { zip, sourceBytes, sourceEntries } = buildTrimmedZip(files);
+  return {
+    comment: "Generated by scripts/python-stdlib.mjs --write. Do not edit by hand.",
+    pyodide: pyodideVersion,
+    python,
+    teachingModules: TEACHING_MODULES,
+    sizes: {
+      fullStdlibZipBytes: sourceBytes,
+      fullStdlibEntries: sourceEntries,
+      trimmedStdlibZipBytes: zip.length,
+      trimmedFiles: files.length,
+    },
+    files,
+  };
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const mode = process.argv[2];
+  const manifest = await computeManifest();
+  const text = `${JSON.stringify(manifest, null, 2)}\n`;
+  if (mode === "--write") {
+    writeFileSync(MANIFEST_PATH, text);
+    console.log(
+      `stdlib manifest: ${manifest.files.length} files, ${manifest.sizes.trimmedStdlibZipBytes} bytes ` +
+        `(full: ${manifest.sizes.fullStdlibEntries} entries, ${manifest.sizes.fullStdlibZipBytes} bytes)`,
+    );
+  } else if (mode === "--check") {
+    const current = readFileSync(MANIFEST_PATH, "utf8");
+    if (current !== text) {
+      console.error("python/stdlib-manifest.json is stale. Run: node scripts/python-stdlib.mjs --write");
+      process.exit(1);
+    }
+    console.log("stdlib manifest is up to date");
+  } else {
+    console.error("usage: node scripts/python-stdlib.mjs --write | --check");
+    process.exit(2);
+  }
+}

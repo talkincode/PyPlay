@@ -1,0 +1,9 @@
+node_modules/
+dist/
+public/pyodide/
+.wrangler/
+test-results/
+playwright-report/
+__pycache__/
+*.pyc
+.DS_Store

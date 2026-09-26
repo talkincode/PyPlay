@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="PyPlay：给孩子的 Python 与海龟画图练习场，打开浏览器就能写代码。" />
+    <title>PyPlay · 儿童 Python 海龟画图</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand"><span class="logo">🐢</span><span class="name">PyPlay</span></div>
+        <div class="actions">
+          <button id="run" class="btn run" title="运行 (Ctrl+Enter)">▶ 运行</button>
+          <button id="stop" class="btn stop" title="停止" disabled>■ 停止</button>
+          <select id="examples" class="select" aria-label="示例程序">
+            <option value="">📚 示例程序…</option>
+          </select>
+          <select id="engine" class="select" aria-label="运行引擎" title="运行引擎">
+            <option value="auto">引擎：自动</option>
+            <option value="fast">⚡ 快速引擎</option>
+            <option value="python">🐍 完整 Python</option>
+          </select>
+        </div>
+        <div class="actions secondary">
+          <button id="share" class="btn ghost" title="复制分享链接">🔗 分享</button>
+          <button id="save-image" class="btn ghost" title="保存画布为图片">🖼️ 保存图片</button>
+        </div>
+      </header>
+      <main class="workspace">
+        <section class="pane editor-pane">
+          <div id="editor" class="editor"></div>
+        </section>
+        <section class="pane side-pane">
+          <div class="canvas-wrap">
+            <canvas id="canvas" aria-label="海龟画布"></canvas>
+            <div id="canvas-title" class="canvas-title"></div>
+          </div>
+          <div class="console-wrap">
+            <div class="console-head">
+              <span>输出</span>
+              <span id="status" class="status">准备就绪</span>
+              <button id="clear-console" class="btn tiny ghost">清空</button>
+            </div>
+            <div id="console" class="console" role="log" aria-live="polite"></div>
+            <form id="input-row" class="input-row" hidden>
+              <input id="input-field" autocomplete="off" placeholder="在这里输入，然后按回车" />
+              <button class="btn tiny" type="submit">确定</button>
+            </form>
+          </div>
+        </section>
+      </main>
+      <dialog id="dialog" class="dialog">
+        <form method="dialog" id="dialog-form">
+          <h3 id="dialog-title"></h3>
+          <p id="dialog-prompt"></p>
+          <input id="dialog-input" autocomplete="off" />
+          <div class="dialog-actions">
+            <button value="cancel" class="btn ghost" type="button" id="dialog-cancel">取消</button>
+            <button value="ok" class="btn run" type="submit">确定</button>
+          </div>
+        </form>
+      </dialog>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "pyplay",
+  "private": true,
+  "version": "0.1.0",
+  "description": "PyPlay — a minimal Python + turtle playground for kids, running entirely in the browser.",
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/prepare-runtime.mjs && vite",
+    "build": "node scripts/prepare-runtime.mjs && tsc --noEmit && vite build",
+    "preview": "wrangler dev --port 8788",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:conformance": "vitest run --project conformance",
+    "test:e2e": "playwright test",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "pyodide": "314.0.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.1",
+    "wrangler": "^4.139.0"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "codemirror": "^6.0.2"
+  }
+}

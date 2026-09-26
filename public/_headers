@@ -1,0 +1,15 @@
+# Cross-origin isolation: required for SharedArrayBuffer (input(), keyboard /
+# mouse events, and the Stop button in the full-Python engine).
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Versioned / content-hashed paths never change.
+/pyodide/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
