@@ -1,0 +1,6 @@
+{
+  "comment": "python/turtle.py is CPython's Lib/turtle.py, byte for byte. PyPlay never edits it; tests/unit/upstream.test.ts enforces this.",
+  "source": "https://github.com/python/cpython/blob/v3.14.5/Lib/turtle.py",
+  "cpython": "3.14.5",
+  "sha256": "6074e63c2aab6998418e55b0ebc74c8a64c2813a8c079e12a0fbee8ddf2c13c5"
+}

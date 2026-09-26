@@ -1,5 +1,5 @@
 import "./styles.css";
-import type { Engine, RunCallbacks } from "./engines/engine";
+import { type Engine, EngineFallback, type RunCallbacks } from "./engines/engine";
 import { FastEngine } from "./engines/fast/engine";
 import { analyzeSubset } from "./engines/fast/subset";
 import { PyodideEngine } from "./engines/pyodide/engine";
@@ -25,6 +25,7 @@ const runBtn = $<HTMLButtonElement>("run");
 const stopBtn = $<HTMLButtonElement>("stop");
 const examplesSel = $<HTMLSelectElement>("examples");
 const engineSel = $<HTMLSelectElement>("engine");
+const paceSel = $<HTMLSelectElement>("pace");
 const statusEl = $("status");
 const inputRow = $<HTMLFormElement>("input-row");
 const inputField = $<HTMLInputElement>("input-field");
@@ -116,26 +117,46 @@ const callbacks: RunCallbacks = {
   line: (line) => editor.markLines(line, null),
 };
 
+function resetOutput(): void {
+  output.clear();
+  scene.reset();
+  canvasTitle.textContent = "";
+  editor.markLines(null, null);
+}
+
+async function runOn(engine: Engine, source: string, stepDelayMs: number): Promise<RunResult> {
+  active = engine;
+  setStatus(`${ENGINE_LABEL[engine.id]} · 准备中…`);
+  await engine.ready();
+  setStatus(`${ENGINE_LABEL[engine.id]} · 运行中`);
+  return engine.run(source, callbacks, { stepDelayMs });
+}
+
 async function run(): Promise<void> {
   if (active) return;
   const source = editor.getCode();
   const pref = engineSel.value as EnginePreference;
   const choice = chooseEngine(pref, analyzeSubset(source));
-  const engine = engines[choice.engine];
-  output.clear();
-  scene.reset();
-  canvasTitle.textContent = "";
-  editor.markLines(null, null);
-  active = engine;
+  let engine = engines[choice.engine];
+  const stepDelayMs = Number(paceSel.value);
+  resetOutput();
   setRunning(true);
-  setStatus(`${ENGINE_LABEL[engine.id]} · 准备中…`);
-  if (choice.engine === "python" && pref === "auto") output.info(`ℹ️ ${choice.reason}`);
+  if (choice.engine === "python" && pref !== "python") output.info(`ℹ️ ${choice.reason}`);
+  if (stepDelayMs > 0 && engine.id === "python") output.info("ℹ️ 逐行演示只支持快速引擎，这次按正常速度运行");
   let result: RunResult;
   const started = performance.now();
   try {
-    await engine.ready();
-    setStatus(`${ENGINE_LABEL[engine.id]} · 运行中`);
-    result = await engine.run(source, callbacks);
+    try {
+      result = await runOn(engine, source, stepDelayMs);
+    } catch (err) {
+      if (!(err instanceof EngineFallback)) throw err;
+      // the fast engine met something outside its subset mid-run: start over on full Python
+      hideInput();
+      resetOutput();
+      output.info(`ℹ️ 用到了 ${err.feature}，改用完整 Python 重新运行`);
+      engine = engines.python;
+      result = await runOn(engine, source, 0);
+    }
   } catch (err) {
     result = {
       status: "error",

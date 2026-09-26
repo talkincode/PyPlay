@@ -1,0 +1,5 @@
+[
+  { "type": "button", "press": true, "num": 1, "x": 50, "y": -40 },
+  { "type": "button", "press": false, "num": 1, "x": 50, "y": -40 },
+  { "type": "button", "press": true, "num": 1, "x": -120.5, "y": 60.25 }
+]

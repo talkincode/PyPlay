@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:conformance": "vitest run --project conformance",
     "test:e2e": "playwright test",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "gen": "python3 scripts/gen-tk-colors.py && python3 scripts/gen-cpython-attrs.py && node scripts/python-stdlib.mjs --write",
+    "check:generated": "pnpm gen && git diff --exit-code -- python/tkinter/tk_colors.json src/engines/fast/cpython-attributes.json python/stdlib-manifest.json"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

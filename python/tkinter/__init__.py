@@ -216,11 +216,13 @@ class Misc:
     def winfo_screenheight(self):
         return _host.screen_size()[1]
 
+    # The browser sizes everything to the toplevel window, like a packed
+    # Tk frame that fills its root; before geometry() is set Tk reports 1.
     def winfo_width(self):
-        return int(self._options.get("width", 1))
+        return int(self.winfo_toplevel()._options.get("_geometry_width", 1))
 
     def winfo_height(self):
-        return int(self._options.get("height", 1))
+        return int(self.winfo_toplevel()._options.get("_geometry_height", 1))
 
     def config(self, cnf=None, **kw):
         if cnf:
@@ -296,7 +298,7 @@ class Tk(Misc):
             return ""
         size = spec.split("+")[0].split("-")[0]
         w, h = (int(float(v)) for v in size.split("x"))
-        self._options["width"], self._options["height"] = w, h
+        self._options["_geometry_width"], self._options["_geometry_height"] = w, h
         _host.emit({"op": "window", "width": w, "height": h})
         return ""
 
@@ -402,12 +404,6 @@ class Canvas(Misc):
 
     configure = config
 
-    def winfo_width(self):
-        return int(self.winfo_toplevel()._options.get("width", self._options.get("width", 1)))
-
-    def winfo_height(self):
-        return int(self.winfo_toplevel()._options.get("height", self._options.get("height", 1)))
-
     # -- scrolling: the browser always centres the scroll region ----------
     def xview(self, *a):
         return (0.0, 1.0)
@@ -435,7 +431,8 @@ class Canvas(Misc):
         opts = _clean_opts(kw)
         self._items[item] = {"kind": kind, "coords": coords, "opts": opts}
         self._order.append(item)
-        _host.emit({"op": "create", "id": item, "kind": kind, "coords": coords, "opts": opts})
+        # emit copies: the mirror's own dicts/lists keep changing afterwards
+        _host.emit({"op": "create", "id": item, "kind": kind, "coords": list(coords), "opts": dict(opts)})
         return item
 
     def create_line(self, *args, **kw):
@@ -462,7 +459,7 @@ class Canvas(Misc):
         coords = _flatten_coords(args)
         if coords != it["coords"]:
             it["coords"] = coords
-            _host.emit({"op": "coords", "id": item, "coords": coords})
+            _host.emit({"op": "coords", "id": item, "coords": list(coords)})
         return None
 
     def itemconfigure(self, item, cnf=None, **kw):
@@ -474,7 +471,7 @@ class Canvas(Misc):
         changed = {k: v for k, v in _clean_opts(kw).items() if it["opts"].get(k, _MISSING) != v}
         if changed:
             it["opts"].update(changed)
-            _host.emit({"op": "config", "id": item, "opts": changed})
+            _host.emit({"op": "config", "id": item, "opts": dict(changed)})
 
     itemconfig = itemconfigure
 

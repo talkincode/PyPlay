@@ -1,0 +1,16 @@
+import turtle
+screen = turtle.Screen()
+screen.setup(400, 300)
+screen.title("Two turtles")
+a = turtle.Turtle()
+b = turtle.Turtle()
+a.color("red")
+b.color("blue")
+b.left(180)
+for _ in range(4):
+    a.forward(50)
+    b.forward(50)
+    a.left(90)
+    b.right(90)
+print(len(screen.turtles()), screen.window_width(), screen.window_height(), a.distance(b), round(a.towards(b), 6))
+turtle.done()

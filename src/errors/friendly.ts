@@ -157,14 +157,14 @@ export function explain(err: PyError, source: string): FriendlyError {
     case "KeyError":
       return { title: `${at}：字典里没有这个键 ${m}`, hint: "先用 in 检查键是否存在，或用 .get()。" };
     case "AttributeError": {
-      const match = m.match(/module '(.+?)' has no attribute '(.+?)'/);
-      if (match) {
-        return {
-          title: `${at}：${match[1]} 里没有 “${match[2]}”`,
-          hint: "检查拼写，比如 turtle.forward 而不是 turtle.foward。",
-        };
-      }
-      return { title: `${at}：没有这个属性或方法`, hint: "检查点号后面的名字拼写。" };
+      // CPython's own "Did you mean" (only in the traceback) is the best hint
+      const meant = err.traceback.match(/Did you mean: '(.+?)'\?/)?.[1];
+      const mod = m.match(/module '(.+?)' has no attribute '(.+?)'/);
+      const obj = m.match(/'(.+?)' object has no attribute '(.+?)'/);
+      const hint = meant ? `是不是想写 “${meant}”？` : "检查点号后面的名字拼写。";
+      if (mod) return { title: `${at}：${mod[1]} 里没有 “${mod[2]}”`, hint };
+      if (obj) return { title: `${at}：${obj[1]} 没有 “${obj[2]}” 这个功能`, hint };
+      return { title: `${at}：没有这个属性或方法`, hint };
     }
     case "ModuleNotFoundError": {
       const match = m.match(/No module named '(.+?)'/);

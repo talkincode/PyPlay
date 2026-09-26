@@ -1,0 +1,8 @@
+[
+  { "type": "key", "press": true, "keysym": "Up", "char": "" },
+  { "type": "key", "press": false, "keysym": "Up", "char": "" },
+  { "type": "key", "press": true, "keysym": "Right", "char": "" },
+  { "type": "key", "press": false, "keysym": "Right", "char": "" },
+  { "type": "key", "press": true, "keysym": "a", "char": "a" },
+  { "type": "key", "press": false, "keysym": "Up", "char": "" }
+]
