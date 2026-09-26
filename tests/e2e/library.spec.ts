@@ -47,7 +47,10 @@ test("favorites and learning progress are remembered", async ({ page }) => {
   await page.goto("/");
   await page.click("#library");
   const dialog = page.locator("dialog.library");
-  await dialog.locator(".lib-sidebar").getByRole("button", { name: /^小游戏/ }).click();
+  await dialog
+    .locator(".lib-sidebar")
+    .getByRole("button", { name: /^小游戏/ })
+    .click();
   await dialog.locator('[data-example="dice"]').click();
   await dialog.getByRole("button", { name: "☆ 收藏" }).click();
   await expect(dialog.getByRole("button", { name: "★ 已收藏" })).toBeVisible();
@@ -73,7 +76,10 @@ test("favorites and learning progress are remembered", async ({ page }) => {
 test("keyboard examples can be tried inside the preview", async ({ page }) => {
   await page.goto("/");
   await page.click("#library");
-  await page.locator("dialog.library .lib-sidebar").getByRole("button", { name: /^小游戏/ }).click();
+  await page
+    .locator("dialog.library .lib-sidebar")
+    .getByRole("button", { name: /^小游戏/ })
+    .click();
   await page.locator('[data-example="keys"]').click();
   await expect(page.locator(".preview-output")).toContainText("方向键");
   const before = await inkPixels(page, ".preview-canvas");
