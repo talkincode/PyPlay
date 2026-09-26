@@ -102,8 +102,8 @@ PyPlay 自己的 Python 子集解释器，运行在主线程：
 
 1. 运行前：`analyzeSubset()` 拒绝子集外的语法、`math/random/time/turtle` 以外的 import、
    快速引擎没有的 CPython 内置名（`set`、`open`…）、以及 CPython 有但快速引擎没实现的属性名。
-   属性名的判断依据是 `cpython-attributes.json`（`scripts/gen-cpython-attrs.py` 从真实
-   CPython 的 `dir()` 生成）：CPython 也没有的名字（孩子的拼写错误）属于真正的
+   属性名的判断依据是 `cpython-attributes.json`（`scripts/gen-cpython-attrs.mjs` 在 Node 里启动
+   Pyodide，收集完整 Python 引擎所用 CPython 的 `dir()`，因此与开发机平台无关）：CPython 也没有的名字（孩子的拼写错误）属于真正的
    `AttributeError`，快速引擎会给出同样的报错和 `Did you mean` 提示。
 2. 运行中：遇到未实现的分支抛 `Unsupported`；JS 调用栈耗尽（约 200 层以上的递归）也按此处理。
    页面清空输出，改用完整 Python 从头重跑，并提示原因。

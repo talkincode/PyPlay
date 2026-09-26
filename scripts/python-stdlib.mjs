@@ -12,14 +12,14 @@
  * prepare-runtime.mjs builds the shipped python_stdlib.zip from the manifest.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bootPyodideWithRuntime, PYODIDE_DIR } from "./pyodide-node.mjs";
 import { readZip, writeZip } from "./zip.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const require = createRequire(import.meta.url);
-export const PYODIDE_DIR = dirname(require.resolve("pyodide/package.json"));
+
+export { PYODIDE_DIR };
 export const MANIFEST_PATH = join(ROOT, "python/stdlib-manifest.json");
 
 /** Modules kids may `import`. Adding one here is a product decision. */
@@ -69,45 +69,12 @@ s.ontimer(lambda: None, 10); turtle.done()`,
   "print(f'{3.14159:.2f} {10**20} {[1, 2][5]}')",
 ];
 
-const HOST_STUB = `
-import types, sys
-h = types.ModuleType("_pyplay_host")
-h.emit = lambda cmd: None
-h.flush = lambda: None
-h.sleep = lambda ms: None
-def _wait(timeout):
-    if timeout is None:
-        raise KeyboardInterrupt  # mainloop with nothing left to do: "Stop"
-    return None
-h.wait_event = _wait
-h.measure_text = lambda text, font: (len(text) * 8, 12)
-h.ask_string = lambda title, prompt: None
-h.screen_size = lambda: (1280, 800)
-sys.modules["_pyplay_host"] = h
-`;
-
 async function discover() {
-  const { loadPyodide } = await import("pyodide");
-  const py = await loadPyodide({ indexURL: `${PYODIDE_DIR}/` });
-  const runtime = "/home/pyodide/pyplay";
-  py.FS.mkdirTree(`${runtime}/tkinter`);
-  for (const f of [
-    "turtle.py",
-    "_pyplay_run.py",
-    "tkinter/__init__.py",
-    "tkinter/simpledialog.py",
-    "tkinter/tk_colors.json",
-  ]) {
-    py.FS.writeFile(`${runtime}/${f}`, readFileSync(join(ROOT, "python", f)));
-  }
-  py.setStdout({ batched: () => {} });
-  py.setStderr({ batched: () => {} });
+  const py = await bootPyodideWithRuntime();
   py.globals.set("SMOKE", py.toPy(SMOKE_PROGRAMS));
   py.globals.set("MODULES", py.toPy(TEACHING_MODULES));
   const json = py.runPython(`
-${HOST_STUB}
 import sys, json
-sys.path.insert(0, "${runtime}")
 import _pyplay_run
 for name in MODULES:
     __import__(name)
