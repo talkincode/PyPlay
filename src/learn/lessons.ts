@@ -155,12 +155,14 @@ export function taskMiss(task: LessonTask, stdout: string, scene: Scene): string
     const got = stdout.replace(/\n$/, "").split("\n");
     const n = Math.max(want.length, got.length);
     for (let i = 0; i < n; i++) {
-      if (want[i] === got[i]) continue;
+      const gotLine = got[i];
+      const wantLine = want[i];
+      if (wantLine === gotLine) continue;
       const line = i + 1;
-      const actual = got[i] === undefined ? "" : visible(got[i]);
-      const expected = want[i] === undefined ? "" : visible(want[i]);
-      if (got[i] === undefined) return `还没对上。第 ${line} 行还没出现「${expected}」。`;
-      if (want[i] === undefined) return `还没对上。第 ${line} 行多出来了「${actual}」。`;
+      const actual = gotLine === undefined ? "" : visible(gotLine);
+      const expected = wantLine === undefined ? "" : visible(wantLine);
+      if (gotLine === undefined) return `还没对上。第 ${line} 行还没出现「${expected}」。`;
+      if (wantLine === undefined) return `还没对上。第 ${line} 行多出来了「${actual}」。`;
       return `还没对上。第 ${line} 行现在是「${actual}」，要改成「${expected}」。`;
     }
   }
