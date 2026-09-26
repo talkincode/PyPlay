@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runHeadless } from "../../src/engines/fast/headless";
 import { FastProgram } from "../../src/engines/fast/program";
 import { EXAMPLE_BY_ID } from "../../src/examples";
-import { LESSONS, nextLesson, taskPassed } from "../../src/learn/lessons";
+import { LESSONS, nextLesson, taskMiss, taskPassed } from "../../src/learn/lessons";
 import { Scene } from "../../src/render/scene";
 
 const solved: Record<string, { code: string; stdin?: string[] }> = {
@@ -47,6 +47,24 @@ describe("lesson tasks", () => {
     for (const lesson of LESSONS) expect(EXAMPLE_BY_ID.has(lesson.id), lesson.id).toBe(true);
   });
 
+  it("says which printed line is still the original", () => {
+    const lesson = LESSONS[0];
+    if (!lesson) throw new Error("lesson 1");
+    const { run, scene } = outcome(codeOf("animal-hello"));
+    expect(taskMiss(lesson.task, run.stdout, scene)).toBe(
+      "还没对上。第 1 行现在是「小猫说：喵～」，要改成「小鸭说：嘎！」。",
+    );
+  });
+
+  it("marks spaces so a shorter star row is visible", () => {
+    const lesson = LESSONS.find((item) => item.id === "print-triangle");
+    if (!lesson) throw new Error("print-triangle");
+    const { run, scene } = outcome(codeOf("print-triangle"));
+    expect(taskMiss(lesson.task, run.stdout, scene)).toBe(
+      "还没对上。第 1 行现在是「····*」，要改成「··*」。",
+    );
+  });
+
   it("points a new learner at the first lesson that is not done", () => {
     expect(nextLesson(new Set())?.id).toBe("animal-hello");
     expect(nextLesson(new Set(["animal-hello", "pencils"]))?.id).toBe("umbrella");
@@ -60,6 +78,7 @@ describe("lesson tasks", () => {
       const { run, scene } = outcome(example.code, example.input);
       expect(run.result.status, run.stdout).not.toBe("unsupported");
       expect(taskPassed(lesson.task, run.stdout, scene)).toBe(false);
+      expect(taskMiss(lesson.task, run.stdout, scene)).not.toBe("还没对上，再改改");
     });
 
     it(`${lesson.id}: the one change finishes the lesson`, () => {

@@ -133,6 +133,7 @@ test("a lesson counts only after the asked-for change", async ({ page }) => {
   await page.click("#run");
   await expect(page.locator("#status")).toHaveText(/运行完成/);
   await expect(page.locator("#lesson-state")).toHaveText("还没对上，再改改");
+  await expect(page.locator("#console .lesson-miss")).toContainText("要改成「小鸭说：嘎！」");
 
   await page.click("#editor .cm-content");
   await page.keyboard.press("ControlOrMeta+A");

@@ -172,6 +172,22 @@ body {
   color: var(--ok-ink);
   font-weight: 800;
 }
+.lesson.miss {
+  background: var(--highlight);
+}
+.lesson-state.miss {
+  color: var(--error-ink);
+  font-weight: 800;
+}
+.console .lesson-miss {
+  margin: 8px 0;
+  padding: 10px 12px;
+  background: var(--highlight);
+  border-radius: 10px;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  white-space: normal;
+  font-weight: 700;
+}
 .vars {
   display: flex;
   flex-wrap: wrap;

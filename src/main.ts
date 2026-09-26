@@ -6,7 +6,7 @@ import { analyzeSubset } from "./engines/fast/subset";
 import { PyodideEngine } from "./engines/pyodide/engine";
 import { chooseEngine, type EnginePreference } from "./engines/router";
 import { EXAMPLE_BY_ID, type Example } from "./examples";
-import { LESSONS, lessonById, lessonIndex, nextLesson, taskPassed } from "./learn/lessons";
+import { LESSONS, lessonById, lessonIndex, nextLesson, taskMiss, taskPassed } from "./learn/lessons";
 import type { EngineId, RunResult } from "./protocol";
 import { keyEvent, Renderer } from "./render/renderer";
 import { Scene, snapshot } from "./render/scene";
@@ -276,6 +276,7 @@ async function keepThumbnail(result: RunResult): Promise<void> {
       toast("这课做到了");
     } else {
       lessonMissed = true;
+      output.miss(taskMiss(lesson.task, runStdout, scene));
     }
   }
   await paintLesson();
@@ -310,6 +311,9 @@ async function paintLesson(): Promise<void> {
     const passed = done.has(id);
     state.textContent = passed ? "做到了" : lessonMissed ? "还没对上，再改改" : "改好再运行";
     state.classList.toggle("done", passed);
+    state.classList.toggle("miss", !passed && lessonMissed);
+    bar.classList.toggle("miss", !passed && lessonMissed);
+    bar.classList.toggle("done", passed);
     const following = LESSONS[n];
     next.hidden = !(passed && following);
     next.textContent = "下一课";
@@ -319,7 +323,8 @@ async function paintLesson(): Promise<void> {
     };
     return;
   }
-  state.classList.remove("done");
+  bar.classList.remove("miss", "done");
+  state.classList.remove("done", "miss");
   next.hidden = !upcoming;
   next.textContent = "继续上课";
   if (upcoming) {

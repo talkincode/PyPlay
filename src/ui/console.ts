@@ -24,6 +24,16 @@ export class ConsoleView {
     this.span("info", `${text}\n`);
   }
 
+  /** A lesson ran, and the printed text or drawing did not match. */
+  miss(text: string): void {
+    this.ensureNewline();
+    const card = document.createElement("div");
+    card.className = "lesson-miss";
+    card.textContent = text;
+    this.el.append(card);
+    this.scroll();
+  }
+
   error(err: PyError, source: string): void {
     const f = explain(err, source);
     const card = document.createElement("div");

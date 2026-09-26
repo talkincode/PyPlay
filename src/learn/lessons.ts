@@ -142,3 +142,30 @@ export function taskPassed(task: LessonTask, stdout: string, scene: Scene): bool
   if (task.color !== undefined && !sceneUsesColor(scene, task.color)) return false;
   return task.stdout !== undefined || task.color !== undefined;
 }
+
+/** Spaces become middle dots so two lines that differ only by spacing stay readable. */
+function visible(line: string): string {
+  return line.replaceAll(" ", "·");
+}
+
+/** One sentence a child can use after a run that did not match. */
+export function taskMiss(task: LessonTask, stdout: string, scene: Scene): string {
+  if (task.stdout !== undefined && stdout !== task.stdout) {
+    const want = task.stdout.replace(/\n$/, "").split("\n");
+    const got = stdout.replace(/\n$/, "").split("\n");
+    const n = Math.max(want.length, got.length);
+    for (let i = 0; i < n; i++) {
+      if (want[i] === got[i]) continue;
+      const line = i + 1;
+      const actual = got[i] === undefined ? "" : visible(got[i]);
+      const expected = want[i] === undefined ? "" : visible(want[i]);
+      if (got[i] === undefined) return `还没对上。第 ${line} 行还没出现「${expected}」。`;
+      if (want[i] === undefined) return `还没对上。第 ${line} 行多出来了「${actual}」。`;
+      return `还没对上。第 ${line} 行现在是「${actual}」，要改成「${expected}」。`;
+    }
+  }
+  if (task.color !== undefined && !sceneUsesColor(scene, task.color)) {
+    return `还没对上。画面上还没有 ${task.color}。`;
+  }
+  return "还没对上，再改改";
+}
