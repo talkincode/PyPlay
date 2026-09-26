@@ -48,10 +48,10 @@ pnpm dev            # http://localhost:5173（已开启跨源隔离）
 站点是纯静态的，部署在 Cloudflare Workers Static Assets，域名为 `pyplay.talkincode.net`（见 `wrangler.jsonc`）。
 
 - **CI 自动发布：** 推送到 `main` 后，[CI](.github/workflows/ci.yml) 依次跑完 lint、类型检查、生成文件检查、单元与一致性测试、构建和 E2E，全部通过后把同一份 `dist/` 发布到 Cloudflare。
-- **需要在 GitHub 仓库里配置：**
-  - Secret `CLOUDFLARE_API_TOKEN`：用 Cloudflare 的 "Edit Cloudflare Workers" 模板创建，作用范围限定为本账号和 `talkincode.net` 这个 zone。
-  - Variable `CLOUDFLARE_ACCOUNT_ID`。
-  - 缺少 token 时，发布步骤会明确失败并提示。
+- **发布凭据：**
+  - Secret `CLOUDFLARE_API_TOKEN`：`talkincode` 组织已经提供了组织级 secret。如需单独配置，用 Cloudflare 的 "Edit Cloudflare Workers" 模板创建 token，作用范围限定为本账号和 `talkincode.net` 这个 zone。
+  - Variable `CLOUDFLARE_ACCOUNT_ID`：已在仓库中设置。
+  - 两者任一缺失时，发布步骤会明确失败并提示。
 - **手动发布：** `pnpm build && pnpm deploy`（使用本机 `wrangler login` 的身份）。
 - **跨源隔离：** COOP/COEP 响应头来自 `public/_headers`。完整 Python 引擎的 `input()`、键盘事件和停止按钮都依赖跨源隔离。如果 PyPlay 被嵌进别的网页的 iframe，完整 Python 会不可用（页面会提示），但快速引擎仍然正常。
 
