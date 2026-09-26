@@ -1,8 +1,8 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { python } from "@codemirror/lang-python";
-import { indentUnit } from "@codemirror/language";
+import { defaultHighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
-import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
+import { Decoration, type DecorationSet, EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 
 /** Line decorations: the line currently running, and the line that failed. */
@@ -33,7 +33,10 @@ const marksField = StateField.define<DecorationSet>({
 
 export interface CodeEditor {
   getCode(): string;
+  /** Replace the document as a user edit would (undoable). */
   setCode(code: string): void;
+  /** Start over with a new document and an empty undo history (switching projects). */
+  load(code: string): void;
   markLines(current: number | null, error: number | null): void;
   focus(): void;
   hasFocus(): boolean;
@@ -44,10 +47,10 @@ export function createEditor(
   initial: string,
   opts: { onChange(code: string): void; onRun(): void },
 ): CodeEditor {
-  const view = new EditorView({
-    parent,
-    state: EditorState.create({
-      doc: initial,
+  let silent = false;
+  const makeState = (doc: string) =>
+    EditorState.create({
+      doc,
       extensions: [
         basicSetup,
         history(),
@@ -69,18 +72,43 @@ export function createEditor(
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
-            opts.onChange(u.state.doc.toString());
-            view.dispatch({ effects: setMarks.of({ current: null, error: null }) });
+            if (!silent) opts.onChange(u.state.doc.toString());
+            u.view.dispatch({ effects: setMarks.of({ current: null, error: null }) });
           }
         }),
       ],
-    }),
-  });
+    });
+  const view = new EditorView({ parent, state: makeState(initial) });
   return {
     getCode: () => view.state.doc.toString(),
     setCode: (code) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: code } }),
+    load: (code) => {
+      silent = true;
+      try {
+        view.setState(makeState(code));
+      } finally {
+        silent = false;
+      }
+    },
     markLines: (current, error) => view.dispatch({ effects: setMarks.of({ current, error }) }),
     focus: () => view.focus(),
     hasFocus: () => view.hasFocus,
   };
+}
+
+/** Read-only, syntax-highlighted code (example previews). */
+export function createCodeView(parent: HTMLElement): { show(code: string): void } {
+  const makeState = (doc: string) =>
+    EditorState.create({
+      doc,
+      extensions: [
+        lineNumbers(),
+        python(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        EditorState.readOnly.of(true),
+        EditorView.editable.of(false),
+      ],
+    });
+  const view = new EditorView({ parent, state: makeState("") });
+  return { show: (code) => view.setState(makeState(code)) };
 }

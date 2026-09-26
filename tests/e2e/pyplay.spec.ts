@@ -1,33 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
-
-/** Put a program in the editor (via the autosave slot) and reload. */
-async function load(page: Page, code: string, opts: { engine?: string; pace?: string } = {}) {
-  await page.goto("/");
-  await page.evaluate(
-    ({ code, engine }) => {
-      localStorage.setItem("pyplay.code", code);
-      localStorage.setItem("pyplay.engine", engine);
-    },
-    { code, engine: opts.engine ?? "auto" },
-  );
-  await page.reload();
-  if (opts.pace) await page.selectOption("#pace", opts.pace);
-}
-
-async function runAndWait(page: Page) {
-  await page.click("#run");
-  await expect(page.locator("#status")).toHaveText(/运行完成|出错了|已停止/, { timeout: 60_000 });
-}
-
-async function inkPixels(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const c = document.querySelector("#canvas") as HTMLCanvasElement;
-    const d = (c.getContext("2d") as CanvasRenderingContext2D).getImageData(0, 0, c.width, c.height).data;
-    let n = 0;
-    for (let i = 0; i < d.length; i += 4) if (d[i] !== 255 || d[i + 1] !== 255 || d[i + 2] !== 255) n++;
-    return n;
-  });
-}
+import { expect, test } from "@playwright/test";
+import { inkPixels, load, runAndWait, shareUrl } from "./helpers";
 
 test("page is cross-origin isolated (needed by full Python)", async ({ page }) => {
   await page.goto("/");
@@ -85,9 +57,9 @@ for (const engine of ["fast", "python"] as const) {
     await page.click("#stop");
     await expect(page.locator("#status")).toContainText("已停止", { timeout: 5_000 });
     await expect(page.locator("#run")).toBeEnabled();
-    // and the next run works
-    await page.evaluate(() => localStorage.setItem("pyplay.code", "print('again')"));
-    await page.reload();
+    // and the next run works (a share link pasted into this tab opens as a new project)
+    await page.goto(shareUrl("print('again')"));
+    await expect(page.locator("#editor .cm-content")).toHaveText("print('again')");
     await runAndWait(page);
     await expect(page.locator("#console")).toContainText("again");
   });
@@ -131,10 +103,11 @@ test("share link restores the program", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await load(page, "print('shared program 🐢')\n");
   await page.click("#share");
-  await expect(page.locator(".toast")).toContainText("分享链接已复制");
+  await expect(page.locator(".toast", { hasText: "分享链接已复制" })).toBeVisible();
   const url = await page.evaluate(() => navigator.clipboard.readText());
   expect(url).toMatch(/#code=/);
-  await page.evaluate(() => localStorage.clear());
-  await page.goto(url);
-  await expect(page.locator(".cm-content")).toContainText("shared program 🐢");
+  const fresh = await context.newPage();
+  await fresh.goto(url);
+  await expect(fresh.locator("#editor .cm-content")).toContainText("shared program 🐢");
+  await expect(fresh.locator("#project")).toContainText("分享的程序");
 });

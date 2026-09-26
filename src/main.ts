@@ -1,18 +1,23 @@
 import "./styles.css";
+import { ProjectSession } from "./app/session";
 import { type Engine, EngineFallback, type RunCallbacks } from "./engines/engine";
 import { FastEngine } from "./engines/fast/engine";
 import { analyzeSubset } from "./engines/fast/subset";
 import { PyodideEngine } from "./engines/pyodide/engine";
 import { chooseEngine, type EnginePreference } from "./engines/router";
-import { EXAMPLES } from "./examples";
+import type { Example } from "./examples";
 import type { EngineId, RunResult } from "./protocol";
 import { keyEvent, Renderer } from "./render/renderer";
-import { Scene } from "./render/scene";
+import { Scene, snapshot } from "./render/scene";
 import { decodeShare, encodeShare } from "./share";
+import { openStorage, type ProjectService } from "./storage";
 import { ConsoleView } from "./ui/console";
+import { download } from "./ui/dom";
 import { createEditor } from "./ui/editor";
+import { ExampleLibrary } from "./ui/exampleLibrary";
+import { ProjectPanel } from "./ui/projectPanel";
 
-const STORAGE_CODE = "pyplay.code";
+/** UI preferences stay in localStorage; the child's work lives in IndexedDB + OPFS. */
 const STORAGE_ENGINE = "pyplay.engine";
 
 function $<T extends HTMLElement>(id: string): T {
@@ -23,7 +28,8 @@ function $<T extends HTMLElement>(id: string): T {
 
 const runBtn = $<HTMLButtonElement>("run");
 const stopBtn = $<HTMLButtonElement>("stop");
-const examplesSel = $<HTMLSelectElement>("examples");
+const projectBtn = $<HTMLButtonElement>("project");
+const saveStateEl = $("save-state");
 const engineSel = $<HTMLSelectElement>("engine");
 const paceSel = $<HTMLSelectElement>("pace");
 const statusEl = $("status");
@@ -46,34 +52,42 @@ const ENGINE_LABEL: Record<EngineId, string> = { fast: "⚡ 快速引擎", pytho
 let active: Engine | null = null;
 let pendingInput: "stdin" | "dialog" | null = null;
 
-// ---------------------------------------------------------------- editor
-const editor = createEditor($("editor"), EXAMPLES[0]?.code ?? "", {
-  onChange: (code) => localStorage.setItem(STORAGE_CODE, code),
+// ---------------------------------------------------------------- editor + project
+let session: ProjectSession;
+const editor = createEditor($("editor"), "", {
+  onChange: (code) => session.edited(code),
   onRun: () => void run(),
 });
 
-async function loadInitialCode(): Promise<void> {
-  const shared = await decodeShare(location.hash).catch(() => null);
-  if (shared !== null) {
-    editor.setCode(shared);
-    history.replaceState(null, "", location.pathname);
-    return;
-  }
-  const saved = localStorage.getItem(STORAGE_CODE);
-  if (saved) editor.setCode(saved);
+const SAVE_LABEL = {
+  saved: "✓ 已保存",
+  saving: "保存中…",
+  unsaved: "● 未保存",
+  error: "⚠️ 保存失败",
+  memory: "⚠️ 不会保存",
+} as const;
+
+function renderProject(): void {
+  const name = session.current?.name ?? "未保存的程序";
+  projectBtn.textContent = `📁 ${name}`;
+  projectBtn.title = session.projects
+    ? "我的项目（点击切换、新建、导出）"
+    : "浏览器不允许本地存储，作品不会被保存";
+  saveStateEl.textContent = SAVE_LABEL[session.state];
+  saveStateEl.dataset.state = session.state;
+  document.title = `${name} · PyPlay`;
 }
 
-for (const ex of EXAMPLES) {
-  const opt = document.createElement("option");
-  opt.value = ex.id;
-  opt.textContent = ex.title;
-  examplesSel.append(opt);
+async function loadExample(example: Example): Promise<void> {
+  await stopIfRunning();
+  await session.createAndOpen(example.title, example.code, {
+    fromExample: example.id,
+    tags: [example.categories[0] ?? "示例"],
+  });
+  await session.projects?.markProgress(example.id, "loaded");
+  resetOutput();
+  toast(`已加载“${example.title}”到新项目，点 ▶ 运行试试`);
 }
-examplesSel.addEventListener("change", () => {
-  const ex = EXAMPLES.find((e) => e.id === examplesSel.value);
-  examplesSel.value = "";
-  if (ex) editor.setCode(ex.code);
-});
 
 engineSel.value = localStorage.getItem(STORAGE_ENGINE) ?? "auto";
 engineSel.addEventListener("change", () => localStorage.setItem(STORAGE_ENGINE, engineSel.value));
@@ -132,8 +146,22 @@ async function runOn(engine: Engine, source: string, stepDelayMs: number): Promi
   return engine.run(source, callbacks, { stepDelayMs });
 }
 
-async function run(): Promise<void> {
-  if (active) return;
+let currentRun: Promise<void> = Promise.resolve();
+
+/** Stop the running program (if any) and wait until it has ended. */
+async function stopIfRunning(): Promise<void> {
+  if (!active) return;
+  stop();
+  await currentRun;
+}
+
+function run(): Promise<void> {
+  if (active) return currentRun;
+  currentRun = runProgram();
+  return currentRun;
+}
+
+async function runProgram(): Promise<void> {
   const source = editor.getCode();
   const pref = engineSel.value as EnginePreference;
   const choice = chooseEngine(pref, analyzeSubset(source));
@@ -166,6 +194,7 @@ async function run(): Promise<void> {
   hideInput();
   active = null;
   setRunning(false);
+  void keepThumbnail(result);
   const secs = ((performance.now() - started) / 1000).toFixed(1);
   if (result.status === "ok") {
     editor.markLines(null, null);
@@ -179,6 +208,14 @@ async function run(): Promise<void> {
     editor.markLines(null, result.error.line);
     setStatus(`${ENGINE_LABEL[engine.id]} · 出错了`);
   }
+}
+
+async function keepThumbnail(result: RunResult): Promise<void> {
+  const drew = snapshot(scene).items.length > 0;
+  const thumb = drew ? await renderer.toThumbnail(320, 240) : null;
+  await session
+    .afterRun(result.status === "ok", thumb)
+    .catch((e: unknown) => console.error("PyPlay: thumbnail", e));
 }
 
 function stop(): void {
@@ -238,7 +275,8 @@ function toast(text: string): void {
   const t = document.createElement("div");
   t.className = "toast";
   t.textContent = text;
-  document.body.append(t);
+  // an open modal dialog sits in the top layer; show the toast inside it
+  (document.querySelector("dialog[open]") ?? document.body).append(t);
   setTimeout(() => t.remove(), 2200);
 }
 
@@ -255,15 +293,80 @@ $("share").addEventListener("click", async () => {
 $("save-image").addEventListener("click", async () => {
   const blob = await renderer.toPngBlob();
   if (!blob) return;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "pyplay.png";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  const name = await session.saveScreenshot(blob).catch(() => null);
+  download(name ?? "pyplay.png", blob);
+  if (name) toast("图片已下载，也保存到了项目里 📷");
+});
+
+// ---------------------------------------------------------------- dialogs
+let library: ExampleLibrary | null = null;
+$("library").addEventListener("click", () => {
+  library ??= new ExampleLibrary(session.projects, loadExample);
+  void library.open();
+});
+
+let panel: ProjectPanel | null = null;
+projectBtn.addEventListener("click", () => {
+  const projects = session.projects;
+  if (!projects) {
+    toast("这个浏览器不允许本地存储（可能是隐私模式），作品不会被保存");
+    return;
+  }
+  panel ??= new ProjectPanel(projects, {
+    currentId: () => session.current?.id ?? null,
+    open: async (id) => {
+      await stopIfRunning();
+      await session.open(id);
+      resetOutput();
+    },
+    create: async (name, code) => {
+      await stopIfRunning();
+      await session.createAndOpen(name, code);
+      resetOutput();
+    },
+    changed: async () => {
+      await stopIfRunning();
+      await session.refresh();
+    },
+    flush: () => session.flush(),
+    toast,
+  });
+  void panel.open();
+});
+
+// a share link pasted into an already open PyPlay tab only changes the hash
+window.addEventListener("hashchange", async () => {
+  const code = await decodeShare(location.hash).catch(() => null);
+  if (code === null) return;
+  history.replaceState(null, "", location.pathname);
+  await stopIfRunning();
+  await session.openShared(code);
+  resetOutput();
+  toast("已把分享的程序存为新项目");
+});
+
+// save before the tab goes away (localStorage already holds a copy)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") void session.flush();
 });
 
 // ---------------------------------------------------------------- start
-await loadInitialCode();
+let projects: ProjectService | null = null;
+try {
+  projects = (await openStorage()).projects;
+} catch (e) {
+  console.error("PyPlay: local storage unavailable", e);
+}
+session = new ProjectSession(projects, editor);
+session.onChange = renderProject;
+const { shared } = await session.start(location.hash);
+if (shared) {
+  history.replaceState(null, "", location.pathname);
+  toast("已把分享的程序存为新项目");
+}
+renderProject();
+if (!projects) output.info("⚠️ 这个浏览器不允许本地存储（可能是隐私模式），作品不会被保存。");
+
 if (PyodideEngine.supported()) {
   // warm up full Python in the background so fallbacks start fast
   const warm = () =>

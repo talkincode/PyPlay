@@ -119,7 +119,27 @@ PyPlay 自己的 Python 子集解释器，运行在主线程：
 两边使用相同的虚拟时钟、输入行（`NAME.stdin`）和事件脚本（`NAME.events.json`）。
 第一行为 `# expect: full-python` 的程序则断言快速引擎会拒绝它（用来锁住回退边界）。
 
-## 4. 部署
+## 4. 本地项目与示例库
+
+孩子的作品只保存在本机浏览器里，按数据性质分两处存放：
+
+| 存储 | 内容 | 代码 |
+| --- | --- | --- |
+| **IndexedDB**（库名 `pyplay`） | `projects` 项目元数据（名字、标签、时间、来源示例、是否有缩略图）<br>`favorites` 收藏的示例<br>`progress` 示例学习进度（`viewed` < `loaded` < `ran`，只进不退）<br>`kv` 小设置（上次打开的项目） | `src/storage/db.ts` |
+| **OPFS** | `projects/<id>/main.py` 代码<br>`projects/<id>/thumbnail.png` 最近一次运行的画面<br>`projects/<id>/screenshots/*.png` 保存的图片 | `src/storage/files.ts` |
+
+- `ProjectService`（`src/storage/projects.ts`）是唯一同时操作两者的地方。创建项目时**先写文件、再写元数据**，这样元数据永远不会指向不存在的代码。导出 zip 用的是 `src/storage/zip.ts`（仅存储、不压缩、文件名用 UTF-8）。
+- **Safari 兼容：** Safari 的主线程没有 `FileSystemFileHandle.createWritable()`，这种情况下由 `opfsWorker.ts` 用 `createSyncAccessHandle` 在 Worker 里写入。
+- **没有 OPFS 时：** 如果浏览器完全不支持 OPFS，文件改存到 IndexedDB 的 `files` 表（`IdbFileStore`），接口不变。
+- **不丢数据：** `src/app/session.ts` 负责当前项目：
+  - 编辑停顿 600ms 后写入 OPFS；
+  - 每次编辑同时同步写一份到 `localStorage`（`pyplay.unsaved`），标签页在保存之前关闭也不会丢，下次启动时自动恢复；
+  - 页面隐藏时立即保存。
+- **从不覆盖：** 加载示例、打开分享链接、导入文件，都会新建一个项目。切换项目前会先停止正在运行的程序。
+- **旧数据迁移：** 早期版本把代码存在 `localStorage` 的 `pyplay.code`，首次启动时会迁移为"我的第一个项目"。
+- **示例库**（`src/examples/`）按分类写成数据；详情页的预览用一个独立的 `FastEngine` 真实运行示例，预设的 `input` 答案自动填入。`tests/conformance/examples.test.ts` 让每个示例都在 CPython 与快速引擎上比对。
+
+## 5. 部署
 
 纯静态站点，部署在 Cloudflare Workers Static Assets（`wrangler.jsonc`，没有 Worker 脚本）。
 `public/_headers` 负责 COOP/COEP 和缓存。注意：`_headers` 只作用于静态资源，

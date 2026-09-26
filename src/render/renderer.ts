@@ -11,12 +11,19 @@ import type { Scene, SceneItem } from "./scene";
  * and centred; canvas coordinate (0, 0) is the centre of the panel.
  */
 export class Renderer {
-  private readonly ctx: CanvasRenderingContext2D;
+  private readonly mainCtx: CanvasRenderingContext2D;
+  /** Target of the current paint (the main canvas or a thumbnail). */
+  private ctx: CanvasRenderingContext2D;
+  private originX = 0;
+  private originY = 0;
+  private halfW = 0;
+  private halfH = 0;
   private drawnVersion = -1;
   private scale = 1;
   private raf = 0;
   private cssWidth = 0;
   private cssHeight = 0;
+  private readonly resizeObserver: ResizeObserver;
   onEvent: ((ev: HostEvent) => void) | null = null;
 
   constructor(
@@ -25,8 +32,10 @@ export class Renderer {
   ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("renderer: 2D canvas context unavailable");
+    this.mainCtx = ctx;
     this.ctx = ctx;
-    new ResizeObserver(() => this.resize()).observe(canvas);
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(canvas);
     this.resize();
     this.bindInput();
     const loop = () => {
@@ -38,6 +47,7 @@ export class Renderer {
 
   dispose(): void {
     cancelAnimationFrame(this.raf);
+    this.resizeObserver.disconnect();
   }
 
   /** Force a redraw on the next frame (e.g. after a theme change). */
@@ -48,6 +58,56 @@ export class Renderer {
   toPngBlob(): Promise<Blob | null> {
     this.draw();
     return new Promise((resolve) => this.canvas.toBlob(resolve, "image/png"));
+  }
+
+  /**
+   * Small PNG of the drawing, zoomed to what was actually drawn (project list
+   * thumbnails). Null when nothing visible was drawn.
+   */
+  toThumbnail(width: number, height: number): Promise<Blob | null> {
+    const box = this.drawingBounds();
+    if (!box) return Promise.resolve(null);
+    const c = document.createElement("canvas");
+    c.width = width;
+    c.height = height;
+    const ctx = c.getContext("2d");
+    if (!ctx) return Promise.resolve(null);
+    const pad = 16;
+    const scale = Math.min(
+      3,
+      (width - pad * 2) / Math.max(1, box.w),
+      (height - pad * 2) / Math.max(1, box.h),
+    );
+    this.paint(ctx, width, height, scale, box.cx, box.cy, 1);
+    this.invalidate();
+    return new Promise((resolve) => c.toBlob(resolve, "image/png"));
+  }
+
+  /** Bounding box (canvas coordinates) of visible items, including line widths. */
+  private drawingBounds(): { cx: number; cy: number; w: number; h: number } | null {
+    let x0 = Number.POSITIVE_INFINITY;
+    let y0 = Number.POSITIVE_INFINITY;
+    let x1 = Number.NEGATIVE_INFINITY;
+    let y1 = Number.NEGATIVE_INFINITY;
+    for (const it of this.scene.drawOrder()) {
+      const visible =
+        it.kind === "text" ||
+        (it.kind === "line" && !!it.opts.fill) ||
+        (it.kind === "polygon" && (!!it.opts.fill || !!it.opts.outline));
+      if (!visible || it.coords.length < 2) continue;
+      if (it.kind === "polygon" && it.coords.every((v) => v === 0)) continue; // hidden turtle
+      const r = Number(it.opts.width ?? 1) / 2 + (it.kind === "text" ? 20 : 0);
+      for (let i = 0; i + 1 < it.coords.length; i += 2) {
+        const x = it.coords[i] as number;
+        const y = it.coords[i + 1] as number;
+        x0 = Math.min(x0, x - r);
+        y0 = Math.min(y0, y - r);
+        x1 = Math.max(x1, x + r);
+        y1 = Math.max(y1, y + r);
+      }
+    }
+    if (!Number.isFinite(x0)) return null;
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 };
   }
 
   private resize(): void {
@@ -61,7 +121,7 @@ export class Renderer {
   }
 
   private toPixel(x: number, y: number): [number, number] {
-    return [x * this.scale + this.cssWidth / 2, y * this.scale + this.cssHeight / 2];
+    return [(x - this.originX) * this.scale + this.halfW, (y - this.originY) * this.scale + this.halfH];
   }
 
   private toCanvas(px: number, py: number): [number, number] {
@@ -69,14 +129,42 @@ export class Renderer {
   }
 
   draw(): void {
-    const { ctx, scene } = this;
     const dpr = this.canvas.width / this.cssWidth;
-    this.scale = Math.min(this.cssWidth / scene.window.width, this.cssHeight / scene.window.height);
+    const scale = Math.min(
+      this.cssWidth / this.scene.window.width,
+      this.cssHeight / this.scene.window.height,
+    );
+    this.paint(this.mainCtx, this.cssWidth, this.cssHeight, scale, 0, 0, dpr);
+    this.drawnVersion = this.scene.version;
+  }
+
+  /** Paint the scene into `ctx` (width × height CSS px), centred on canvas point (originX, originY). */
+  private paint(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    scale: number,
+    originX: number,
+    originY: number,
+    dpr: number,
+  ): void {
+    this.ctx = ctx;
+    this.scale = scale;
+    this.originX = originX;
+    this.originY = originY;
+    this.halfW = width / 2;
+    this.halfH = height / 2;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = tkColorToCss(scene.background) ?? "white";
-    ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
-    for (const item of scene.drawOrder()) this.drawItem(item);
-    this.drawnVersion = scene.version;
+    ctx.fillStyle = tkColorToCss(this.scene.background) ?? "white";
+    ctx.fillRect(0, 0, width, height);
+    for (const item of this.scene.drawOrder()) this.drawItem(item);
+    this.ctx = this.mainCtx;
+    // keep the main view's mapping for pointer events
+    this.scale = Math.min(this.cssWidth / this.scene.window.width, this.cssHeight / this.scene.window.height);
+    this.originX = 0;
+    this.originY = 0;
+    this.halfW = this.cssWidth / 2;
+    this.halfH = this.cssHeight / 2;
   }
 
   private drawItem(it: SceneItem): void {

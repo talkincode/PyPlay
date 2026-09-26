@@ -11,12 +11,14 @@
     <div id="app">
       <header class="topbar">
         <div class="brand"><span class="logo">🐢</span><span class="name">PyPlay</span></div>
+        <div class="project-box">
+          <button id="project" class="btn ghost project-btn" title="我的项目">📁 …</button>
+          <span id="save-state" class="save-state" aria-live="polite"></span>
+        </div>
         <div class="actions">
           <button id="run" class="btn run" title="运行 (Ctrl+Enter)">▶ 运行</button>
           <button id="stop" class="btn stop" title="停止" disabled>■ 停止</button>
-          <select id="examples" class="select" aria-label="示例程序">
-            <option value="">📚 示例程序…</option>
-          </select>
+          <button id="library" class="btn ghost" title="打开示例库">📚 示例库</button>
           <select id="pace" class="select" aria-label="运行速度" title="逐行演示：每一步高亮正在执行的代码（快速引擎）">
             <option value="0">⏩ 正常速度</option>
             <option value="400">🐾 逐行演示</option>

@@ -106,6 +106,11 @@ export class FastEngine implements Engine {
     this.advance(a.program.interrupt());
   }
 
+  /** End the current run immediately, without giving the program a KeyboardInterrupt. */
+  abort(): void {
+    if (this.active) this.finish({ status: "stopped" });
+  }
+
   /** Resume after a zero-length pause (time slicing), via MessageChannel to avoid timer clamping. */
   private resumeSoon: Resume | undefined;
   private yieldToPage(a: Active, value: Resume): void {

@@ -77,11 +77,20 @@ CodeMirror 编辑器（Python 高亮、Ctrl+Enter 运行、自动保存到浏览
 
 - 分享与保存图片
 
-分享链接把代码压缩后放在 URL 片段（`src/share.ts`）；画布可保存为 PNG。
+分享链接把代码压缩后放在 URL 片段（`src/share.ts`），打开后存成新项目（已打开的标签页里粘贴链接也生效）；
+"保存图片"下载 PNG 并存入项目的 `screenshots/`。
 
-- 示例程序
+- 本地项目管理
 
-9 个入门示例（`src/examples.ts`），每个都经测试在 CPython 与快速引擎上结果一致。
+每个作品是一个项目：自动保存（OPFS 存代码、缩略图、截图；IndexedDB 存元数据），最近打开排序、标签筛选、
+新建、导入 `.py`、改名、复制、导出 `.py` / `.zip`、删除；关闭标签页前未保存的编辑会自动恢复。
+入口 `src/app/session.ts`、`src/storage/`、`src/ui/projectPanel.ts`。
+
+- 示例库
+
+44 个示例，9 个分类，搜索、收藏、最近看过、学习进度；详情页（你会学到、难度、实时预览、代码、说明）确认后才
+"加载到编辑器"，并存成新项目。数据在 `src/examples/`，界面在 `src/ui/exampleLibrary.ts`。
+每个示例都经测试在 CPython 与快速引擎上结果一致。
 
 - 裁剪的 Python 运行时与部署
 
@@ -118,6 +127,11 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 - 可视化教学
 
 在逐行演示的基础上加入变量面板、调用栈/递归树可视化和单步前进/后退。服务于"孩子看得懂"。
+
+- 多设备与备份
+
+作品目前只在本机。可以考虑：整库导出/导入（一个 zip 包含所有项目），或者在"课堂与作业"方向里提供可选的云端同步。
+本地优先、无账号可用的铁律不变。
 
 - 课堂与作业（需要后端时）
 
@@ -158,7 +172,7 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 
 | 一级功能 | 风险级别 | Happy Path E2E | 失败路径 | 权限角色覆盖 | 失败恢复/回滚 | 证据（测试路径/用例） |
 | --- | --- | --- | --- | --- | --- | --- |
-| 编写与运行 Python | 中 | ✅ | ✅ | 不适用 | ✅ | `tests/e2e/pyplay.spec.ts`：`turtle drawing appears on the canvas`、`errors show a Chinese hint…`；自动保存恢复由各用例的 `load()` 覆盖 |
+| 编写与运行 Python | 中 | ✅ | ✅ | 不适用 | 不适用（持久化见"本地项目管理"） | `tests/e2e/pyplay.spec.ts`：`turtle drawing appears on the canvas`、`errors show a Chinese hint…` |
 | 海龟画图 | 高（行为必须与 CPython 一致） | ✅ | ✅ | 不适用 | 不适用（只读渲染） | e2e：`turtle drawing appears on the canvas`（两引擎）；`tests/conformance/programs/turtle_*.py`（含 `turtle_errors.py`）；`tests/conformance/examples.test.ts` |
 | `input()` 与对话框 | 中 | ✅ | ✅ | 不适用 | 不适用 | e2e：`input() reads what the child types`（两引擎）；conformance：`input_basic.py`、`guess_game.py`；对话框 ❌ 缺口 |
 | 键盘、鼠标、定时器事件 | 中 | ✅ | ✅ | 不适用 | 不适用 | e2e：`arrow keys drive onkey handlers until Stop`（两引擎）；conformance：`turtle_keys.py`、`turtle_click.py`、`turtle_timer.py`、`turtle_exitonclick.py`；鼠标点击 e2e ❌ 缺口 |
@@ -166,9 +180,10 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 | 中文报错 | 中 | ✅ | ✅ | 不适用 | 不适用 | e2e：`errors show a Chinese hint, the traceback and the line`（两引擎）；`tests/unit/friendly.test.ts`；conformance：`err_*.py` |
 | 双引擎自动选择与回退 | 高（结果必须正确） | ✅ | ✅ | 不适用 | ✅ | e2e：`programs outside the fast subset run on full Python`、`a fast run that hits its limits restarts on full Python`；`tests/unit/share-router.test.ts`；conformance：`expect_full_*.py` |
 | 逐行演示 | 低 | ✅ | ❌ 缺口 | 不适用 | 不适用 | e2e：`step mode highlights the running line` |
-| 分享链接 | 低 | ✅ | ✅ | 不适用 | 不适用 | e2e：`share link restores the program`；`tests/unit/share-router.test.ts`（非法片段返回 null） |
-| 保存图片 | 低 | ❌ 缺口 | ❌ 缺口 | 不适用 | 不适用 | 无 |
-| 示例程序 | 中 | ✅ | 不适用（固定内容） | 不适用 | 不适用 | `tests/conformance/examples.test.ts`（每个示例在 CPython 与快速引擎上结果一致）；菜单操作 e2e ❌ 缺口 |
+| 分享链接 | 低 | ✅ | ✅ | 不适用 | 不适用（总是新建项目） | e2e：`share link restores the program`、`Stop ends an infinite loop…`（已打开的标签页里粘贴链接）；`tests/unit/share-router.test.ts`（非法片段返回 null） |
+| 保存图片 | 低 | ✅ | ❌ 缺口 | 不适用 | 不适用 | e2e：`runs leave a thumbnail and saved pictures are counted`（`tests/e2e/projects.spec.ts`） |
+| 本地项目管理（OPFS + IndexedDB） | 高（孩子作品丢失） | ✅ | ✅ | 不适用 | ✅ | `tests/e2e/projects.spec.ts`：`edits are saved to OPFS and survive a reload`、`create, rename, tag, switch and delete projects`（含取消删除、删除当前项目后回落）、`export .py / .zip and import a .py file`；恢复：`an edit is not lost when the tab closes before autosave`；`tests/unit/projects.test.ts`（含 zip 由 Python `zipfile` 校验） |
+| 示例库 | 中 | ✅ | ✅ | 不适用 | ✅（加载不覆盖现有项目） | `tests/e2e/library.spec.ts`：`browse, search, preview, and load into a new project`、`example preview feeds scripted input() answers`、`favorites and learning progress are remembered`、`keyboard examples can be tried inside the preview`；搜索无结果/空收藏的提示；`tests/conformance/examples.test.ts`（44 个示例 vs CPython） |
 | 运行时裁剪与部署（跨源隔离） | 高（缺失则完整 Python 不可用） | ✅ | ✅ | 不适用 | ✅ | e2e：`page is cross-origin isolated`；页面在未隔离时提示并保留快速引擎（`src/main.ts`）；`pnpm check:generated`；CI 只发布测试通过的构建 |
 
 缺口的最低期望：
@@ -176,7 +191,6 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 - **对话框：** 补一条 `textinput` 的 e2e。
 - **鼠标点击：** 补一条 `onscreenclick` 的 e2e，点击画布后断言坐标输出。
 - **逐行演示失败路径：** 断言逐行演示中途停止后恢复正常速度可用。
-- **保存图片：** 断言点击后产生 PNG 下载。
-- **示例菜单：** 选择示例后编辑器内容替换。
+- **保存图片失败路径：** 断言画布为空时不生成缩略图，且下载仍可用。
 
-"权限角色覆盖"均为不适用：PyPlay 没有账号和权限体系。"失败恢复/回滚"标"不适用"的功能不修改任何持久状态，只有自动保存会写 localStorage。
+"权限角色覆盖"均为不适用：PyPlay 没有账号和权限体系。"失败恢复/回滚"标"不适用"的功能不修改任何持久状态；修改状态的只有本地项目管理与示例库（加载即新建项目）。

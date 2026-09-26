@@ -30,7 +30,12 @@
    - `src/engines/fast/cpython-attributes.json`
    - `python/stdlib-manifest.json`
 7. **标准库裁剪规格是 `scripts/python-stdlib.mjs` 的 `TEACHING_MODULES`。** 增删模块属于产品决策，必须同步更新 README 的"Python 裁剪规格"。
-8. **运行所需的资源一律同源加载。** `_headers` 只作用于静态资源；如果新增 Worker 脚本，它必须自己设置 COOP/COEP。
+8. **孩子的作品只存在本机，且从不被静默覆盖。**
+   - 元数据放 IndexedDB，文件（代码、图片、导出资源）放 OPFS，都经过 `src/storage/projects.ts`。
+   - 修改 IndexedDB 结构必须提升 `DB_VERSION`，并在 `onupgradeneeded` 里写迁移。
+   - 加载示例、分享链接、导入文件都必须新建项目。
+9. **示例只能放在 `src/examples/`。** 每个示例都会被自动测试：它必须在快速引擎子集内，并且和 CPython 行为一致；需要输入的示例要提供 `input` 答案。
+10. **运行所需的资源一律同源加载。** `_headers` 只作用于静态资源；如果新增 Worker 脚本，它必须自己设置 COOP/COEP。
 
 ## 常用命令
 
@@ -59,7 +64,9 @@ pnpm check:generated     # 生成文件是否最新
 
 | 路径 | 内容 |
 | --- | --- |
-| `src/main.ts`、`src/ui/` | 页面编排、编辑器、控制台 |
+| `src/main.ts`、`src/ui/` | 页面编排、编辑器、控制台、示例库和项目面板 |
+| `src/app/session.ts`、`src/storage/` | 当前项目与自动保存；IndexedDB、OPFS、项目服务 |
+| `src/examples/` | 示例库数据 |
 | `src/render/` | 场景模型、Canvas 渲染、Tk 颜色与字体 |
 | `src/engines/pyodide/` | 完整 Python：Worker 与主线程客户端 |
 | `src/engines/fast/` | 快速引擎：词法、语法、解释器、内置函数、模块、子集判定 |
