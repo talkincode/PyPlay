@@ -13,6 +13,8 @@ export interface RunCallbacks {
   requestInput(req: { kind: "stdin" | "dialog"; prompt: string; title?: string }): void;
   /** Line about to execute (only engines that support stepping call this). */
   line?(line: number): void;
+  /** Names visible at that line, while stepping. */
+  bindings?(vars: { name: string; value: string }[]): void;
 }
 
 export interface RunOptions {

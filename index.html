@@ -57,6 +57,12 @@
           <button id="save-image" class="btn ghost icon" type="button" title="保存画布为图片" aria-label="保存画布为图片">🖼️</button>
         </div>
       </header>
+      <div id="lesson" class="lesson" hidden>
+        <span id="lesson-label" class="lesson-label"></span>
+        <span id="lesson-task" class="lesson-task"></span>
+        <span id="lesson-state" class="lesson-state"></span>
+        <button id="lesson-next" class="btn tiny" type="button" hidden>下一课</button>
+      </div>
       <main class="workspace">
         <section class="pane editor-pane">
           <div id="editor" class="editor"></div>
@@ -72,6 +78,7 @@
               <span id="status" class="status">准备就绪</span>
               <button id="clear-console" class="btn tiny ghost">清空</button>
             </div>
+            <div id="vars" class="vars" hidden></div>
             <div id="console" class="console" role="log" aria-live="polite"></div>
             <form id="input-row" class="input-row" hidden>
               <input id="input-field" autocomplete="off" placeholder="在这里输入，然后按回车" />

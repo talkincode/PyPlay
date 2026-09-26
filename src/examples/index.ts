@@ -3,6 +3,8 @@
  * tests/conformance/examples.test.ts runs every example on real CPython and
  * on the fast engine; add an example here and it is tested automatically.
  */
+
+import { firstLessonExample } from "../learn/lessons";
 import { BASICS } from "./basics";
 import { CHALLENGES } from "./challenges";
 import { FUNCTIONS } from "./functions";
@@ -28,8 +30,8 @@ export const EXAMPLES: Example[] = [
 
 export const EXAMPLE_BY_ID = new Map(EXAMPLES.map((e) => [e.id, e]));
 
-/** Program a brand-new PyPlay user starts with. */
-export const FIRST_EXAMPLE = EXAMPLE_BY_ID.get("star") as Example;
+/** Program a brand-new PyPlay user starts with: the first lesson, not a later drawing. */
+export const FIRST_EXAMPLE = firstLessonExample(EXAMPLE_BY_ID);
 
 export { CATEGORIES, type Category, type Example } from "./types";
 

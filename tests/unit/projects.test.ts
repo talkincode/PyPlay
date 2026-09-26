@@ -105,5 +105,7 @@ describe("example favorites and progress", () => {
     const e = await svc.markProgress("star", "viewed");
     expect(e).toMatchObject({ status: "ran", viewedAt: 5_000 });
     expect(await svc.markProgress("tree", "loaded")).toMatchObject({ status: "loaded" });
+    expect(await svc.markProgress("tree", "done")).toMatchObject({ status: "done" });
+    expect(await svc.markProgress("tree", "ran")).toMatchObject({ status: "done" });
   });
 });

@@ -96,6 +96,8 @@ CodeMirror 编辑器（Python 高亮、Ctrl+Enter 运行、自动保存到浏览
 76 个示例，9 个分类，搜索、收藏、最近看过、学习进度；详情页（你会学到、难度、实时预览、代码、说明）确认后才
 "加载到编辑器"，并存成新项目。数据在 `src/examples/`，界面在 `src/ui/exampleLibrary.ts`。
 每个示例都经测试在 CPython 与快速引擎上结果一致。
+其中 12 课排成一条路径（`src/learn/lessons.ts`）：每课要求改一处，运行后对照输出或画面颜色，对上才记为「做到了」。
+新项目从第一课开始。逐行演示时在输出区上方显示当前能看懂的变量。
 
 - 裁剪的 Python 运行时与部署
 
@@ -131,7 +133,7 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 
 - 可视化教学
 
-在逐行演示的基础上加入变量面板、调用栈/递归树可视化和单步前进/后退。服务于"孩子看得懂"。
+逐行演示时已经在输出区上方显示当前几个简单变量。还没做的是调用栈/递归树，以及单步前进/后退。服务于"孩子看得懂"。
 
 - 多设备与备份
 
@@ -190,6 +192,7 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 | 保存图片 | 低 | ✅ | ❌ 缺口 | 不适用 | 不适用 | e2e：`runs leave a thumbnail and saved pictures are counted`（`tests/e2e/projects.spec.ts`） |
 | 本地项目管理（OPFS + IndexedDB） | 高（孩子作品丢失） | ✅ | ✅ | 不适用 | ✅ | `tests/e2e/projects.spec.ts`：`edits are saved to OPFS and survive a reload`、`create, rename, tag, switch and delete projects`（含取消删除、删除当前项目后回落）、`export .py / .zip and import a .py file`；恢复：`an edit is not lost when the tab closes before autosave`；`tests/unit/projects.test.ts`（含 zip 由 Python `zipfile` 校验） |
 | 示例库 | 中 | ✅ | ✅ | 不适用 | ✅（加载不覆盖现有项目） | `tests/e2e/library.spec.ts`：`browse, search, preview, and load into a new project`、`example preview feeds scripted input() answers`、`favorites and learning progress are remembered`、`keyboard examples can be tried inside the preview`；搜索无结果/空收藏的提示；`tests/conformance/examples.test.ts`（76 个示例 vs CPython） |
+| 学习路径 | 中 | ✅ | ✅ | 不适用 | ✅（没改对不记「做到了」，改对后再运行才记下） | `tests/e2e/pyplay.spec.ts`：`a lesson counts only after the asked-for change`；`tests/unit/lessons.test.ts`（12 课原程序不通过、改一处通过）；逐行变量：e2e `step mode highlights the running line and shows variables` |
 | 运行时裁剪与部署（跨源隔离） | 高（缺失则完整 Python 不可用） | ✅ | ✅ | 不适用 | ✅ | e2e：`page is cross-origin isolated`；页面在未隔离时提示并保留快速引擎（`src/main.ts`）；`pnpm check:generated`；CI 只发布测试通过的构建 |
 
 缺口的最低期望：

@@ -13,7 +13,7 @@ import { type FileStore, readText } from "./files";
 import { buildZip } from "./zip";
 
 const LAST_PROJECT = "lastProjectId";
-const PROGRESS_RANK: Record<ProgressStatus, number> = { viewed: 1, loaded: 2, ran: 3 };
+const PROGRESS_RANK: Record<ProgressStatus, number> = { viewed: 1, loaded: 2, ran: 3, done: 4 };
 
 export interface CreateOptions {
   tags?: string[];

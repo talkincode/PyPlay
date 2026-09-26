@@ -3,7 +3,7 @@
  *
  *   projects   project metadata (name, tags, timestamps, origin example)
  *   favorites  example ids the child starred
- *   progress   per-example learning progress (viewed / loaded / ran)
+ *   progress   per-example learning progress (viewed / loaded / ran / done)
  *   kv         small settings, e.g. the last opened project
  *   files      file contents — used only when the browser has no OPFS
  *
@@ -25,7 +25,7 @@ export interface ProjectMeta {
   screenshots: number;
 }
 
-export type ProgressStatus = "viewed" | "loaded" | "ran";
+export type ProgressStatus = "viewed" | "loaded" | "ran" | "done";
 
 export interface ProgressEntry {
   exampleId: string;

@@ -88,6 +88,11 @@ export class FastProgram {
     return this.interp.currentLine;
   }
 
+  /** Variable names visible at the statement about to run. */
+  bindings(): { name: string; value: string }[] {
+    return this.interp.bindings();
+  }
+
   set stepping(on: boolean) {
     this.interp.stepping = on;
   }

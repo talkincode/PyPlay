@@ -107,6 +107,8 @@ export class Interpreter {
   stepping = false;
   /** Latest line reported to the host. */
   currentLine = 0;
+  /** Scope of the statement about to run, so stepping can show its variables. */
+  private stepScope: Scope | null = null;
   /** str/list/dict/... methods, installed by builtins.ts */
   methods = new Map<string, Map<string, (self: PyValue, call: CallArgs) => PyValue | Gen<PyValue>>>();
 
@@ -152,6 +154,7 @@ export class Interpreter {
   private returnValue: PyValue = null;
 
   *execStmt(s: Stmt, scope: Scope): Gen<Completion> {
+    this.stepScope = scope;
     this.setLine(s.line);
     this.currentLine = s.line;
     if (this.stepping) yield { kind: "tick" };
@@ -334,6 +337,36 @@ export class Interpreter {
     const mod = this.host.importModule(name);
     if (!mod) throw pyErr(EXC.ModuleNotFoundError, `No module named '${name}'`);
     return mod;
+  }
+
+  /** Simple names a child can read at the current step. Modules and turtles are left out. */
+  bindings(): { name: string; value: string }[] {
+    const scope = this.stepScope;
+    if (!scope) return [];
+    const entries = scope.locals ? [...scope.vars] : [...scope.globals];
+    const out: { name: string; value: string }[] = [];
+    for (const [name, value] of entries) {
+      if (name.startsWith("_") || !this.shownValue(value)) continue;
+      let text = repr(value);
+      if (text.length > 28) text = `${text.slice(0, 27)}…`;
+      out.push({ name, value: text });
+      if (out.length === 6) break;
+    }
+    return out;
+  }
+
+  private shownValue(v: PyValue): boolean {
+    if (
+      v === null ||
+      typeof v === "string" ||
+      typeof v === "boolean" ||
+      typeof v === "number" ||
+      typeof v === "bigint"
+    )
+      return true;
+    if (v instanceof PyList || v instanceof PyTuple)
+      return v.items.length <= 8 && v.items.every((item) => this.shownValue(item));
+    return false;
   }
 
   // ---------------------------------------------------------------- names

@@ -64,6 +64,8 @@ for (const engine of ["fast", "python"] as const) {
     );
     await page.click("#run");
     await expect(page.locator("#status")).toContainText("运行中", { timeout: 60_000 });
+    // "运行中" is shown before onkey() runs, especially on full Python.
+    await page.waitForTimeout(2_000);
     await page.click("#canvas");
     await page.keyboard.press("ArrowUp");
     await expect(page.locator("#console")).toContainText("pos (50.00,0.00)");
@@ -115,12 +117,33 @@ test("auto: a fast run that hits its limits restarts on full Python", async ({ p
   await expect(page.locator("#console")).toHaveText(/start\s*900/);
 });
 
-test("step mode highlights the running line", async ({ page }) => {
+test("step mode highlights the running line and shows variables", async ({ page }) => {
   await load(page, "total = 0\nfor i in range(3):\n    total = total + i\nprint(total)\n", { pace: "400" });
   await page.click("#run");
   await expect(page.locator(".pyplay-current")).toBeVisible();
+  await expect(page.locator("#vars")).toContainText("total");
   await expect(page.locator("#status")).toHaveText(/运行完成/, { timeout: 30_000 });
   await expect(page.locator("#console")).toContainText("3");
+});
+
+test("a lesson counts only after the asked-for change", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#project")).toContainText("动物打招呼");
+  await expect(page.locator("#lesson-task")).toContainText("小鸭");
+  await page.click("#run");
+  await expect(page.locator("#status")).toHaveText(/运行完成/);
+  await expect(page.locator("#lesson-state")).toHaveText("还没对上，再改改");
+
+  await page.click("#editor .cm-content");
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.insertText(
+    'print("小鸭说：嘎！")\nprint("小狗说：汪！")\nprint("小鸡说：叽叽叽！")\nprint("你好呀！")\n',
+  );
+  await page.click("#run");
+  await expect(page.locator("#lesson-state")).toHaveText("做到了", { timeout: 15_000 });
+  await page.click("#lesson-next");
+  await expect(page.locator("#project")).toContainText("文具加一加");
+  await expect(page.locator("#lesson-label")).toContainText("第 2 课");
 });
 
 test("share link restores the program", async ({ page, context }) => {

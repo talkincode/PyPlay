@@ -12,6 +12,7 @@ import {
   type Example,
   searchExamples,
 } from "../examples";
+import { LESSONS, lessonById, lessonIndex } from "../learn/lessons";
 import { keyEvent, Renderer } from "../render/renderer";
 import { Scene } from "../render/scene";
 import type { ProgressEntry, ProjectService } from "../storage";
@@ -19,20 +20,26 @@ import { h, richText, stars } from "./dom";
 import { createCodeView } from "./editor";
 
 type Filter =
+  | { kind: "path" }
   | { kind: "all" }
   | { kind: "category"; category: Category }
   | { kind: "favorites" }
   | { kind: "recent" };
 
 const QUICK_SEARCHES = ["循环", "星星", "随机", "列表", "函数", "递归"];
-const PROGRESS_LABEL = { viewed: "👀 看过", loaded: "📥 已加载", ran: "✅ 运行过" } as const;
+const PROGRESS_LABEL = {
+  viewed: "👀 看过",
+  loaded: "📥 已加载",
+  ran: "✅ 运行过",
+  done: "🌟 做到了",
+} as const;
 
 export class ExampleLibrary {
   private readonly dialog: HTMLDialogElement;
   private readonly sidebar: HTMLElement;
   private readonly main: HTMLElement;
   private readonly search: HTMLInputElement;
-  private filter: Filter = { kind: "all" };
+  private filter: Filter = { kind: "path" };
   private favorites = new Set<string>();
   private progress = new Map<string, ProgressEntry>();
   private detailId: string | null = null;
@@ -98,6 +105,8 @@ export class ExampleLibrary {
   private visible(): Example[] {
     let list = EXAMPLES;
     const f = this.filter;
+    if (f.kind === "path")
+      list = LESSONS.map((lesson) => EXAMPLE_BY_ID.get(lesson.id)).filter((e) => e !== undefined);
     if (f.kind === "category") list = list.filter((e) => e.categories.includes(f.category));
     if (f.kind === "favorites") list = list.filter((e) => this.favorites.has(e.id));
     if (f.kind === "recent")
@@ -132,17 +141,23 @@ export class ExampleLibrary {
         h("span", { class: "count" }, count),
       );
     };
-    const done = (list: Example[]) => list.filter((e) => this.progress.get(e.id)?.status === "ran").length;
+    const studied = (list: Example[]) =>
+      list.filter((e) => {
+        const status = this.progress.get(e.id)?.status;
+        return status === "ran" || status === "done";
+      }).length;
+    const passed = LESSONS.filter((lesson) => this.progress.get(lesson.id)?.status === "done").length;
     this.sidebar.replaceChildren(
-      item("全部", { kind: "all" }, `${done(EXAMPLES)}/${EXAMPLES.length}`),
+      item("上课", { kind: "path" }, `${passed}/${LESSONS.length}`),
+      item("全部", { kind: "all" }, `${studied(EXAMPLES)}/${EXAMPLES.length}`),
       item("★ 收藏", { kind: "favorites" }, String(this.favorites.size)),
       item("🕘 最近看过", { kind: "recent" }, String(this.progress.size)),
       h("hr"),
       ...CATEGORIES.map((c) => {
         const list = EXAMPLES.filter((e) => e.categories.includes(c));
-        return item(c, { kind: "category", category: c }, `${done(list)}/${list.length}`);
+        return item(c, { kind: "category", category: c }, `${studied(list)}/${list.length}`);
       }),
-      h("p", { class: "lib-hint" }, "数字：运行过 / 总数"),
+      h("p", { class: "lib-hint" }, "上课：做到了。其他：运行过 / 总数"),
     );
   }
 
@@ -179,6 +194,12 @@ export class ExampleLibrary {
     this.main.replaceChildren(chips, grid, empty ?? "");
   }
 
+  private summary(e: Example): string {
+    const index = lessonIndex(e.id);
+    if (this.filter.kind === "path" && index >= 0) return `第 ${index + 1} 课 · ${e.summary}`;
+    return e.summary;
+  }
+
   private card(e: Example): HTMLElement {
     const p = this.progress.get(e.id);
     return h(
@@ -186,7 +207,7 @@ export class ExampleLibrary {
       { class: "lib-card", "data-example": e.id, onclick: () => void this.showDetail(e.id) },
       h("span", { class: "emoji" }, e.emoji),
       h("span", { class: "title" }, e.title),
-      h("span", { class: "summary" }, e.summary),
+      h("span", { class: "summary" }, this.summary(e)),
       h(
         "span",
         { class: "meta" },
@@ -270,6 +291,14 @@ export class ExampleLibrary {
             h("p", { class: "stars big" }, stars(e.difficulty)),
             h("h4", {}, "说明"),
             ...e.explanation.map((p) => h("p", {}, richText(p))),
+            lessonById(e.id)
+              ? h(
+                  "div",
+                  { class: "lesson-note" },
+                  h("h4", {}, "这一课要做"),
+                  h("p", {}, lessonById(e.id)?.task.prompt ?? ""),
+                )
+              : null,
             h(
               "div",
               { class: "detail-tags" },

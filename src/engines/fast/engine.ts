@@ -149,6 +149,7 @@ export class FastEngine implements Engine {
           if (a.stepDelayMs > 0) {
             a.program.flushCommands();
             a.cb.line?.(a.program.currentLine);
+            a.cb.bindings?.(a.program.bindings());
             this.wait(a, "sleep", a.stepDelayMs, undefined);
             return;
           }

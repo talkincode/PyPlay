@@ -3,7 +3,7 @@ import { inkPixels, runAndWait } from "./helpers";
 
 test("example library: browse, search, preview, and load into a new project", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#project")).toContainText("五角星"); // first-visit starter project
+  await expect(page.locator("#project")).toContainText("动物打招呼"); // first lesson
   const before = await page.locator("#editor .cm-content").textContent();
 
   await page.click("#library");
@@ -32,7 +32,7 @@ test("example library: browse, search, preview, and load into a new project", as
   await expect(page.locator("#editor .cm-content")).toContainText("t.left(90)");
   // the previous project is still there
   await page.click("#project");
-  await expect(page.locator(".proj-card .title")).toContainText(["正方形", "五角星"]);
+  await expect(page.locator(".proj-card .title")).toContainText(["正方形", "动物打招呼"]);
 });
 
 test("example preview feeds scripted input() answers", async ({ page }) => {
@@ -47,6 +47,7 @@ test("favorites and learning progress are remembered", async ({ page }) => {
   await page.goto("/");
   await page.click("#library");
   const dialog = page.locator("dialog.library");
+  await dialog.locator(".lib-sidebar").getByRole("button", { name: /^小游戏/ }).click();
   await dialog.locator('[data-example="dice"]').click();
   await dialog.getByRole("button", { name: "☆ 收藏" }).click();
   await expect(dialog.getByRole("button", { name: "★ 已收藏" })).toBeVisible();
@@ -72,6 +73,7 @@ test("favorites and learning progress are remembered", async ({ page }) => {
 test("keyboard examples can be tried inside the preview", async ({ page }) => {
   await page.goto("/");
   await page.click("#library");
+  await page.locator("dialog.library .lib-sidebar").getByRole("button", { name: /^小游戏/ }).click();
   await page.locator('[data-example="keys"]').click();
   await expect(page.locator(".preview-output")).toContainText("方向键");
   const before = await inkPixels(page, ".preview-canvas");

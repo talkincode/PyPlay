@@ -5,7 +5,8 @@ import { FastEngine } from "./engines/fast/engine";
 import { analyzeSubset } from "./engines/fast/subset";
 import { PyodideEngine } from "./engines/pyodide/engine";
 import { chooseEngine, type EnginePreference } from "./engines/router";
-import type { Example } from "./examples";
+import { EXAMPLE_BY_ID, type Example } from "./examples";
+import { LESSONS, lessonById, lessonIndex, nextLesson, taskPassed } from "./learn/lessons";
 import type { EngineId, RunResult } from "./protocol";
 import { keyEvent, Renderer } from "./render/renderer";
 import { Scene, snapshot } from "./render/scene";
@@ -93,6 +94,7 @@ function renderProject(): void {
   saveStateEl.textContent = SAVE_LABEL[session.state];
   saveStateEl.dataset.state = session.state;
   document.title = `${name} · PyPlay`;
+  void paintLesson();
 }
 
 async function loadExample(example: Example): Promise<void> {
@@ -126,8 +128,17 @@ function hideInput(): void {
   if (dialog.open) dialog.close();
 }
 
+let runStdout = "";
+/** Lessons passed in this tab when the browser will not store progress. */
+const rememberedDone = new Set<string>();
+/** The open lesson was run and did not match its task. */
+let lessonMissed = false;
+
 const callbacks: RunCallbacks = {
-  stdout: (text) => output.write(text),
+  stdout: (text) => {
+    runStdout += text;
+    output.write(text);
+  },
   commands: (cmds) => {
     scene.applyAll(cmds);
     canvasTitle.textContent = scene.title;
@@ -146,6 +157,7 @@ const callbacks: RunCallbacks = {
     }
   },
   line: (line) => editor.markLines(line, null),
+  bindings: (rows) => showBindings(rows),
 };
 
 function resetOutput(): void {
@@ -153,6 +165,25 @@ function resetOutput(): void {
   scene.reset();
   canvasTitle.textContent = "";
   editor.markLines(null, null);
+  runStdout = "";
+  $("vars").hidden = true;
+}
+
+function showBindings(rows: { name: string; value: string }[]): void {
+  const el = $("vars");
+  el.hidden = false;
+  el.replaceChildren(
+    ...(rows.length
+      ? rows.map((row) => {
+          const chip = document.createElement("span");
+          chip.className = "var";
+          const name = document.createElement("b");
+          name.textContent = row.name;
+          chip.append(name, ` = ${row.value}`);
+          return chip;
+        })
+      : [document.createTextNode("这一步还没有变量")]),
+  );
 }
 
 async function runOn(engine: Engine, source: string, stepDelayMs: number): Promise<RunResult> {
@@ -233,6 +264,77 @@ async function keepThumbnail(result: RunResult): Promise<void> {
   await session
     .afterRun(result.status === "ok", thumb)
     .catch((e: unknown) => console.error("PyPlay: thumbnail", e));
+  const id = session.current?.fromExample ?? null;
+  const lesson = id ? lessonById(id) : undefined;
+  lessonMissed = false;
+  if (result.status === "ok" && lesson && id) {
+    if (taskPassed(lesson.task, runStdout, scene)) {
+      rememberedDone.add(id);
+      await session.projects
+        ?.markProgress(id, "done")
+        .catch((e: unknown) => console.error("PyPlay: lesson", e));
+      toast("这课做到了");
+    } else {
+      lessonMissed = true;
+    }
+  }
+  await paintLesson();
+}
+
+let shownLessonId: string | null | undefined;
+
+async function paintLesson(): Promise<void> {
+  const bar = $("lesson");
+  const id = session?.current?.fromExample ?? null;
+  if (id !== shownLessonId) {
+    shownLessonId = id;
+    lessonMissed = false;
+  }
+  const stored = session?.projects ? await session.projects.progress() : [];
+  const done = new Set<string>([
+    ...rememberedDone,
+    ...stored.filter((p) => p.status === "done").map((p) => p.exampleId),
+  ]);
+  const current = id ? lessonById(id) : undefined;
+  const upcoming = nextLesson(done);
+  const label = $("lesson-label");
+  const task = $("lesson-task");
+  const state = $("lesson-state");
+  const next = $<HTMLButtonElement>("lesson-next");
+  bar.hidden = false;
+  if (current && id) {
+    const n = lessonIndex(id) + 1;
+    const title = EXAMPLE_BY_ID.get(id)?.title ?? "";
+    label.textContent = `第 ${n} 课 · ${title}`;
+    task.textContent = current.task.prompt;
+    const passed = done.has(id);
+    state.textContent = passed ? "做到了" : lessonMissed ? "还没对上，再改改" : "改好再运行";
+    state.classList.toggle("done", passed);
+    const following = LESSONS[n];
+    next.hidden = !(passed && following);
+    next.textContent = "下一课";
+    next.onclick = () => {
+      const example = following ? EXAMPLE_BY_ID.get(following.id) : undefined;
+      if (example) void loadExample(example);
+    };
+    return;
+  }
+  state.classList.remove("done");
+  next.hidden = !upcoming;
+  next.textContent = "继续上课";
+  if (upcoming) {
+    const example = EXAMPLE_BY_ID.get(upcoming.id);
+    label.textContent = `第 ${lessonIndex(upcoming.id) + 1} 课`;
+    task.textContent = example ? `${example.emoji} ${example.title}` : upcoming.id;
+    state.textContent = `${done.size} / ${LESSONS.length} 课做到了`;
+    next.onclick = () => {
+      if (example) void loadExample(example);
+    };
+    return;
+  }
+  label.textContent = "学习路径";
+  task.textContent = `${LESSONS.length} 课都做到了`;
+  state.textContent = "";
 }
 
 function stop(): void {
