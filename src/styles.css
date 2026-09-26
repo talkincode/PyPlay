@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f4f7fb;
   --panel: #ffffff;
   --ink: #1f2a37;
@@ -9,11 +10,89 @@
   --red: #e5484d;
   --blue: #3b82f6;
   --amber: #f59e0b;
+  --soft: #eef2f7;
+  --on-accent: #ffffff;
+  --toast-ink: #ffffff;
+  --highlight: #fff3c4;
+  --error-line: #ffe4e4;
+  --error-bg: #fff1f1;
+  --error-border: #ffc9c9;
+  --error-ink: #b42318;
+  --error-detail: #7a271a;
+  --input-bg: #f8fbff;
+  --chip-active-bg: #eef5ff;
+  --nav-active-bg: #e0edff;
+  --nav-active-ink: #1d4ed8;
+  --badge-bg: #eef2f7;
+  --badge-ran-bg: #dcfce7;
+  --badge-ran-ink: #166534;
+  --badge-loaded-bg: #e0f2fe;
+  --badge-loaded-ink: #075985;
+  --card-hover-border: #bfd4ff;
+  --code-bg: #f1f5f9;
+  --current-ring: #bbf7d0;
+  --ok-ink: #166534;
+  --thumb-placeholder: #f1f5f9;
+  --paper: #ffffff;
+  --gutter: #f8fafc;
+  --active-line: rgba(31, 42, 55, 0.04);
+  --selection: #d6e6ff;
   --radius: 14px;
   --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Courier New", monospace;
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   color: var(--ink);
   background: var(--bg);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101820;
+  --panel: #1b2433;
+  --ink: #e7eef8;
+  --muted: #9aabbf;
+  --line: #314156;
+  --green: #3ecf7a;
+  --green-dark: #2eb56a;
+  --red: #ff6b6b;
+  --blue: #7cb3ff;
+  --amber: #fbbf24;
+  --soft: #2a3548;
+  --on-accent: #ffffff;
+  --toast-ink: #101820;
+  --highlight: #4a3b16;
+  --error-line: #4c2430;
+  --error-bg: #3a2228;
+  --error-border: #7f3340;
+  --error-ink: #fecdd3;
+  --error-detail: #fda4af;
+  --input-bg: #152033;
+  --chip-active-bg: #1e3a5f;
+  --nav-active-bg: #1e3a5f;
+  --nav-active-ink: #bfdbfe;
+  --badge-bg: #2a3548;
+  --badge-ran-bg: #14532d;
+  --badge-ran-ink: #bbf7d0;
+  --badge-loaded-bg: #0c4a6e;
+  --badge-loaded-ink: #bae6fd;
+  --card-hover-border: #5b7eac;
+  --code-bg: #253044;
+  --current-ring: #166534;
+  --ok-ink: #bbf7d0;
+  --thumb-placeholder: #253044;
+  --paper: #ffffff;
+  --gutter: #161e2b;
+  --active-line: rgba(255, 255, 255, 0.05);
+  --selection: rgba(124, 179, 255, 0.35);
+}
+
+#theme .when-dark {
+  display: none;
+}
+:root[data-theme="dark"] #theme .when-light {
+  display: none;
+}
+:root[data-theme="dark"] #theme .when-dark {
+  display: inline;
 }
 
 * {
@@ -23,6 +102,8 @@ html,
 body {
   margin: 0;
   height: 100%;
+  background: var(--bg);
+  color: var(--ink);
 }
 #app {
   display: flex;
@@ -47,7 +128,13 @@ body {
   font-size: 22px;
 }
 .logo {
-  font-size: 28px;
+  width: 32px;
+  height: 32px;
+  display: block;
+  border-radius: 8px;
+}
+.brand .name span {
+  color: var(--green-dark);
 }
 .actions {
   display: flex;
@@ -65,7 +152,7 @@ body {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  background: #eef2f7;
+  background: var(--soft);
   color: var(--ink);
   transition:
     transform 0.05s,
@@ -80,7 +167,7 @@ body {
 }
 .btn.run {
   background: var(--green);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 17px;
   padding: 9px 22px;
 }
@@ -89,18 +176,19 @@ body {
 }
 .btn.stop {
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent);
 }
 .btn.ghost {
   background: transparent;
   border: 1px solid var(--line);
 }
 .btn.ghost:hover {
-  background: #eef2f7;
+  background: var(--soft);
 }
-.btn.tiny {
-  padding: 4px 12px;
-  font-size: 13px;
+.btn.icon {
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
 }
 .select {
   border: 1px solid var(--line);
@@ -143,10 +231,10 @@ body {
 }
 .editor .cm-activeLine.pyplay-current,
 .editor .pyplay-current {
-  background: #fff3c4 !important;
+  background: var(--highlight) !important;
 }
 .editor .pyplay-error-line {
-  background: #ffe4e4 !important;
+  background: var(--error-line) !important;
 }
 
 .side-pane {
@@ -162,6 +250,17 @@ body {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
+}
+/* Dark theme: the turtle paper stays white in the pixels (same as CPython).
+   A light veil only changes what the eye sees, so the panel is less glaring. */
+:root[data-theme="dark"] .canvas-wrap::after,
+:root[data-theme="dark"] .preview-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 32, 0.14);
+  pointer-events: none;
+  z-index: 1;
 }
 #canvas {
   width: 100%;
@@ -179,6 +278,7 @@ body {
   font-size: 12px;
   color: var(--muted);
   pointer-events: none;
+  z-index: 2;
 }
 
 .console-wrap {
@@ -224,15 +324,15 @@ body {
 .console .error-card {
   margin: 8px 0;
   padding: 10px 12px;
-  background: #fff1f1;
-  border: 1px solid #ffc9c9;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
   border-radius: 10px;
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
   white-space: normal;
 }
 .console .error-card .title {
   font-weight: 800;
-  color: #b42318;
+  color: var(--error-ink);
 }
 .console .error-card .hint {
   margin-top: 4px;
@@ -241,7 +341,7 @@ body {
   margin: 8px 0 0;
   font-family: var(--mono);
   font-size: 13px;
-  color: #7a271a;
+  color: var(--error-detail);
   white-space: pre-wrap;
 }
 .input-row {
@@ -249,7 +349,7 @@ body {
   gap: 8px;
   padding: 8px 12px;
   border-top: 1px solid var(--line);
-  background: #f8fbff;
+  background: var(--input-bg);
 }
 .input-row input {
   flex: 1;
@@ -265,6 +365,8 @@ body {
   border-radius: var(--radius);
   padding: 20px 22px;
   min-width: 320px;
+  background: var(--panel);
+  color: var(--ink);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 .dialog h3 {
@@ -273,6 +375,12 @@ body {
 .dialog p {
   margin: 0 0 12px;
   white-space: pre-wrap;
+}
+.dialog input,
+.input-row input,
+.lib-search {
+  background: var(--panel);
+  color: var(--ink);
 }
 .dialog input {
   width: 100%;
@@ -294,7 +402,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   background: var(--ink);
-  color: #fff;
+  color: var(--toast-ink);
   padding: 10px 16px;
   border-radius: 999px;
   font-size: 14px;
@@ -354,6 +462,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
+  color: var(--ink);
 }
 .big-dialog[open] {
   display: flex;
@@ -394,6 +503,7 @@ body {
 .chip {
   border: 1px solid var(--line);
   background: var(--panel);
+  color: var(--ink);
   border-radius: 999px;
   padding: 4px 12px;
   font: inherit;
@@ -404,7 +514,7 @@ body {
 .chip.active {
   border-color: var(--blue);
   color: var(--blue);
-  background: #eef5ff;
+  background: var(--chip-active-bg);
 }
 .chip.static {
   cursor: default;
@@ -420,16 +530,16 @@ body {
   font-size: 11px;
   border-radius: 999px;
   padding: 1px 8px;
-  background: #eef2f7;
+  background: var(--badge-bg);
   color: var(--muted);
 }
 .badge.ran {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--badge-ran-bg);
+  color: var(--badge-ran-ink);
 }
 .badge.loaded {
-  background: #e0f2fe;
-  color: #075985;
+  background: var(--badge-loaded-bg);
+  color: var(--badge-loaded-ink);
 }
 .lib-empty {
   color: var(--muted);
@@ -465,6 +575,7 @@ body {
   align-items: center;
   border: 0;
   background: transparent;
+  color: var(--ink);
   padding: 8px 12px;
   border-radius: 10px;
   font: inherit;
@@ -473,11 +584,11 @@ body {
   text-align: left;
 }
 .lib-cat:hover {
-  background: #eef2f7;
+  background: var(--soft);
 }
 .lib-cat.active {
-  background: #e0edff;
-  color: #1d4ed8;
+  background: var(--nav-active-bg);
+  color: var(--nav-active-ink);
   font-weight: 700;
 }
 .lib-cat .count {
@@ -522,7 +633,7 @@ body {
 .lib-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  border-color: #bfd4ff;
+  border-color: var(--card-hover-border);
 }
 .lib-card .emoji {
   font-size: 30px;
@@ -604,7 +715,7 @@ body {
 }
 .detail code {
   font-family: var(--mono);
-  background: #f1f5f9;
+  background: var(--code-bg);
   border-radius: 6px;
   padding: 1px 6px;
   font-size: 0.92em;
@@ -624,13 +735,18 @@ body {
   align-items: center;
   justify-content: space-between;
 }
+.preview-stage {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
 .preview-canvas {
   width: 100%;
   height: 280px;
   display: block;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: white;
+  background: var(--paper);
   outline: none;
 }
 .preview-canvas:focus-visible {
@@ -665,7 +781,7 @@ body {
   overflow-y: auto;
 }
 .preview-code .cm-editor {
-  background: #fbfcfe;
+  background: var(--panel);
 }
 .detail-actions {
   display: flex;
@@ -700,11 +816,12 @@ body {
 }
 .proj-card.current {
   border-color: var(--green);
-  box-shadow: 0 0 0 2px #bbf7d0;
+  box-shadow: 0 0 0 2px var(--current-ring);
 }
 .proj-open {
   border: 0;
   background: transparent;
+  color: var(--ink);
   padding: 0 0 10px;
   font: inherit;
   text-align: left;
@@ -740,7 +857,7 @@ body {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  background: white;
+  background: var(--paper);
   border-bottom: 1px solid var(--line);
   display: block;
 }
@@ -749,7 +866,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 42px;
-  background: #f1f5f9;
+  background: var(--thumb-placeholder);
 }
 .proj-actions {
   display: flex;
@@ -772,7 +889,7 @@ body {
   color: var(--muted);
 }
 .persist.ok {
-  color: #166534;
+  color: var(--ok-ink);
 }
 
 @media (max-width: 860px) {

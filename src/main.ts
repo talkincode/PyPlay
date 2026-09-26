@@ -16,9 +16,26 @@ import { download } from "./ui/dom";
 import { createEditor } from "./ui/editor";
 import { ExampleLibrary } from "./ui/exampleLibrary";
 import { ProjectPanel } from "./ui/projectPanel";
+import { currentTheme, installTheme, onTheme, toggleTheme } from "./ui/theme";
 
 /** UI preferences stay in localStorage; the child's work lives in IndexedDB + OPFS. */
 const STORAGE_ENGINE = "pyplay.engine";
+
+installTheme();
+
+function paintThemeButton(): void {
+  const btn = $<HTMLButtonElement>("theme");
+  const dark = currentTheme() === "dark";
+  btn.title = dark ? "切换到浅色" : "切换到深色";
+  btn.setAttribute("aria-label", btn.title);
+  btn.setAttribute("aria-pressed", dark ? "true" : "false");
+}
+
+paintThemeButton();
+onTheme(paintThemeButton);
+$<HTMLButtonElement>("theme").addEventListener("click", () => {
+  toggleTheme();
+});
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);

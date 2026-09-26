@@ -41,6 +41,7 @@ export class ExampleLibrary {
   private readonly previewScene = new Scene();
   private previewRenderer: Renderer | null = null;
   private previewRun = 0;
+  private codeView: ReturnType<typeof createCodeView> | null = null;
 
   constructor(
     private readonly projects: ProjectService | null,
@@ -279,7 +280,7 @@ export class ExampleLibrary {
             "div",
             { class: "detail-media" },
             h("div", { class: "media-head" }, h("h4", {}, "效果"), replay),
-            canvas,
+            h("div", { class: "preview-stage" }, canvas),
             output,
             note ? h("p", { class: "preview-note" }, note) : null,
             h("h4", {}, "代码"),
@@ -289,12 +290,16 @@ export class ExampleLibrary {
         h("div", { class: "detail-actions" }, load),
       ),
     );
-    createCodeView(codeBox).show(e.code);
+    this.codeView?.dispose();
+    this.codeView = createCodeView(codeBox);
+    this.codeView.show(e.code);
     this.attachPreview(canvas);
     this.startPreview(e, output);
   }
 
   private back(): void {
+    this.codeView?.dispose();
+    this.codeView = null;
     this.stopPreview();
     this.detailId = null;
     this.render();

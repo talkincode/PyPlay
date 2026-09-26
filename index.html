@@ -5,12 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="PyPlay：给孩子的 Python 与海龟画图练习场，打开浏览器就能写代码。" />
     <title>PyPlay · 儿童 Python 海龟画图</title>
+    <script>
+      // Same rule as src/ui/theme.ts: a saved light/dark choice, otherwise the system.
+      try {
+        var savedTheme = localStorage.getItem("pyplay.theme");
+        var theme =
+          savedTheme === "light" || savedTheme === "dark"
+            ? savedTheme
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand"><span class="logo">🐢</span><span class="name">PyPlay</span></div>
+        <div class="brand">
+          <img class="logo" src="/favicon.svg" alt="" />
+          <span class="name">Py<span>Play</span></span>
+        </div>
         <div class="project-box">
           <button id="project" class="btn ghost project-btn" title="我的项目">📁 …</button>
           <span id="save-state" class="save-state" aria-live="polite"></span>
@@ -31,8 +49,12 @@
           </select>
         </div>
         <div class="actions secondary">
-          <button id="share" class="btn ghost" title="复制分享链接">🔗 分享</button>
-          <button id="save-image" class="btn ghost" title="保存画布为图片">🖼️ 保存图片</button>
+          <button id="theme" class="btn ghost icon" type="button" title="切换到深色" aria-label="切换到深色" aria-pressed="false">
+            <span class="when-light" aria-hidden="true">🌙</span>
+            <span class="when-dark" aria-hidden="true">☀️</span>
+          </button>
+          <button id="share" class="btn ghost icon" type="button" title="复制分享链接" aria-label="复制分享链接">🔗</button>
+          <button id="save-image" class="btn ghost icon" type="button" title="保存画布为图片" aria-label="保存画布为图片">🖼️</button>
         </div>
       </header>
       <main class="workspace">

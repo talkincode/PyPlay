@@ -75,6 +75,11 @@ CodeMirror 编辑器（Python 高亮、Ctrl+Enter 运行、自动保存到浏览
 
 快速引擎按选定速度逐条语句执行并高亮当前行（`🐾 逐行演示` / `🐌 逐行慢放`）。
 
+- 明暗主题
+
+顶栏按钮在浅色和深色之间切换，选择记在 `localStorage`（`pyplay.theme`）。没有选择时跟随系统，选过之后就不再跟着变。
+编辑器、示例库和项目列表一起变。海龟画布的纸张保持白色，和 CPython 一样。
+
 - 分享与保存图片
 
 分享链接把代码压缩后放在 URL 片段（`src/share.ts`），打开后存成新项目（已打开的标签页里粘贴链接也生效）；
@@ -88,7 +93,7 @@ CodeMirror 编辑器（Python 高亮、Ctrl+Enter 运行、自动保存到浏览
 
 - 示例库
 
-44 个示例，9 个分类，搜索、收藏、最近看过、学习进度；详情页（你会学到、难度、实时预览、代码、说明）确认后才
+76 个示例，9 个分类，搜索、收藏、最近看过、学习进度；详情页（你会学到、难度、实时预览、代码、说明）确认后才
 "加载到编辑器"，并存成新项目。数据在 `src/examples/`，界面在 `src/ui/exampleLibrary.ts`。
 每个示例都经测试在 CPython 与快速引擎上结果一致。
 
@@ -180,10 +185,11 @@ Cloudflare 静态部署，COOP/COEP 头（`public/_headers`）；CI 测试全过
 | 中文报错 | 中 | ✅ | ✅ | 不适用 | 不适用 | e2e：`errors show a Chinese hint, the traceback and the line`（两引擎）；`tests/unit/friendly.test.ts`；conformance：`err_*.py` |
 | 双引擎自动选择与回退 | 高（结果必须正确） | ✅ | ✅ | 不适用 | ✅ | e2e：`programs outside the fast subset run on full Python`、`a fast run that hits its limits restarts on full Python`；`tests/unit/share-router.test.ts`；conformance：`expect_full_*.py` |
 | 逐行演示 | 低 | ✅ | ❌ 缺口 | 不适用 | 不适用 | e2e：`step mode highlights the running line` |
+| 明暗主题 | 低 | ✅ | ✅ | 不适用 | ✅（记在 localStorage，刷新后仍是所选主题；非法取值退回系统） | `tests/e2e/pyplay.spec.ts`：`theme toggle switches to dark and is remembered` |
 | 分享链接 | 低 | ✅ | ✅ | 不适用 | 不适用（总是新建项目） | e2e：`share link restores the program`、`Stop ends an infinite loop…`（已打开的标签页里粘贴链接）；`tests/unit/share-router.test.ts`（非法片段返回 null） |
 | 保存图片 | 低 | ✅ | ❌ 缺口 | 不适用 | 不适用 | e2e：`runs leave a thumbnail and saved pictures are counted`（`tests/e2e/projects.spec.ts`） |
 | 本地项目管理（OPFS + IndexedDB） | 高（孩子作品丢失） | ✅ | ✅ | 不适用 | ✅ | `tests/e2e/projects.spec.ts`：`edits are saved to OPFS and survive a reload`、`create, rename, tag, switch and delete projects`（含取消删除、删除当前项目后回落）、`export .py / .zip and import a .py file`；恢复：`an edit is not lost when the tab closes before autosave`；`tests/unit/projects.test.ts`（含 zip 由 Python `zipfile` 校验） |
-| 示例库 | 中 | ✅ | ✅ | 不适用 | ✅（加载不覆盖现有项目） | `tests/e2e/library.spec.ts`：`browse, search, preview, and load into a new project`、`example preview feeds scripted input() answers`、`favorites and learning progress are remembered`、`keyboard examples can be tried inside the preview`；搜索无结果/空收藏的提示；`tests/conformance/examples.test.ts`（44 个示例 vs CPython） |
+| 示例库 | 中 | ✅ | ✅ | 不适用 | ✅（加载不覆盖现有项目） | `tests/e2e/library.spec.ts`：`browse, search, preview, and load into a new project`、`example preview feeds scripted input() answers`、`favorites and learning progress are remembered`、`keyboard examples can be tried inside the preview`；搜索无结果/空收藏的提示；`tests/conformance/examples.test.ts`（76 个示例 vs CPython） |
 | 运行时裁剪与部署（跨源隔离） | 高（缺失则完整 Python 不可用） | ✅ | ✅ | 不适用 | ✅ | e2e：`page is cross-origin isolated`；页面在未隔离时提示并保留快速引擎（`src/main.ts`）；`pnpm check:generated`；CI 只发布测试通过的构建 |
 
 缺口的最低期望：

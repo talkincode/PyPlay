@@ -2,6 +2,33 @@ import type { Example } from "./types";
 
 export const MATH: Example[] = [
   {
+    id: "math-tools",
+    title: "math 里的函数",
+    emoji: "📐",
+    summary: "import math",
+    categories: ["数学", "入门"],
+    keywords: ["math.sqrt", "floor", "ceil", "fabs", "gcd", "degrees", "API"],
+    difficulty: 1,
+    learn: [
+      "`import math` 之后用 `math.函数名(...)` 调用",
+      "`sqrt` 开平方，`floor` / `ceil` 取整",
+      "`fabs` 取绝对值，`gcd` 求最大公约数",
+    ],
+    explanation: [
+      "库函数不在每个程序里自动出现。先 `import math`，再在名字前面加上 `math.`，括号里放这个函数要的数。",
+      "`floor` 往小的整数靠，`ceil` 往大的整数靠。`degrees` 把弧度换成角度：半圈 π 弧度是 180 度。",
+    ],
+    code: `import math
+
+print("圆周率", round(math.pi, 5))
+print("平方根", math.sqrt(9), round(math.sqrt(2), 4))
+print("3.2 向下取整", math.floor(3.2), "向上取整", math.ceil(3.2))
+print("绝对值", math.fabs(-8))
+print("最大公约数", math.gcd(18, 12))
+print("半圈是", round(math.degrees(math.pi)), "度")
+`,
+  },
+  {
     id: "times-table",
     title: "九九乘法表",
     emoji: "✖️",
@@ -115,6 +142,134 @@ print(gcd(17, 5))
 top, bottom = 24, 36
 g = gcd(top, bottom)
 print(f"{top}/{bottom} = {top // g}/{bottom // g}")
+`,
+  },
+  {
+    id: "make-change",
+    title: "买东西找零",
+    emoji: "💴",
+    summary: "整除和余数",
+    categories: ["数学"],
+    keywords: ["//", "%", "整除", "找零"],
+    difficulty: 1,
+    learn: ["`//` 得到能找几张纸币", "`%` 得到找完剩下的钱", "先找大面额，再找小面额"],
+    explanation: [
+      "找回 63 元。`63 // 10` 是 6，表示能找 6 张 10 元；`63 % 10` 是 3，这 3 元一张 5 元也找不了，就变成 3 枚 1 元。",
+    ],
+    code: `price = 37
+paid = 100
+change = paid - price
+print("价格", price, "元，付了", paid, "元，找回", change, "元")
+
+tens = change // 10
+left = change % 10
+fives = left // 5
+ones = left % 5
+print(tens, "张 10 元")
+print(fives, "张 5 元")
+print(ones, "枚 1 元")
+`,
+  },
+  {
+    id: "gauss-sum",
+    title: "高斯求和",
+    emoji: "🧮",
+    summary: "求和公式",
+    categories: ["数学"],
+    keywords: ["range", "累加", "公式", "//"],
+    difficulty: 1,
+    learn: ["用循环把 1 加到 100", "`n * (n + 1) // 2` 是同一个答案", "`//` 整除，结果还是整数"],
+    explanation: [
+      "高斯小时候发现：1 加到 100，可以配成 50 对，每一对都是 101。所以不用一位一位加，直接用公式。",
+      "程序里两种算法都算一遍。两个答案一样，公式就写对了。",
+    ],
+    code: `n = 100
+total = 0
+for i in range(1, n + 1):
+    total = total + i
+
+print("从 1 加到", n, "：", total)
+print("公式 n×(n+1)÷2 =", n * (n + 1) // 2)
+`,
+  },
+  {
+    id: "factorial-pick",
+    title: "阶乘和选人",
+    emoji: "🎫",
+    summary: "math.factorial",
+    categories: ["数学"],
+    keywords: ["math.factorial", "math.comb", "阶乘", "组合"],
+    difficulty: 2,
+    learn: [
+      "`math.factorial(n)` 是 1×2×…×n",
+      "`math.comb(n, k)` 是从 n 个里选 k 个的种数",
+      "5 个人两两握手是 C(5, 2)",
+    ],
+    explanation: [
+      "`4!` 就是 1×2×3×4 = 24。人数一多，自己乘很容易漏，交给 `math.factorial`。",
+      "`math.comb(5, 2)` 问的是：5 个人里挑 2 个出来握手，一共几种挑法。顺序无所谓，所以是 10，不是 20。",
+    ],
+    code: `import math
+
+print("1 到 6 的阶乘：")
+for n in range(1, 7):
+    print(n, "!", "=", math.factorial(n))
+
+print("5 个人两两握手，次数是", math.comb(5, 2))
+`,
+  },
+  {
+    id: "sine-cosine",
+    title: "正弦和余弦",
+    emoji: "🌊",
+    summary: "sin 和 cos",
+    categories: ["数学"],
+    keywords: ["math.sin", "math.cos", "math.radians", "角度", "API"],
+    difficulty: 2,
+    learn: [
+      "`math.radians()` 把角度换成弧度",
+      "`math.sin()` 和 `math.cos()`",
+      "`round(..., 4)` 只看四位小数",
+    ],
+    explanation: [
+      "`sin` 和 `cos` 吃的是弧度，不是我们平时说的“度”。90 度要先用 `math.radians(90)` 换过去。",
+      "算出来的小数很长。`round(x, 4)` 四舍五入到四位，打印出来就好比较：sin(90°) 是 1，cos(90°) 是 0。",
+    ],
+    code: `import math
+
+print("角度  正弦  余弦")
+for deg in [0, 30, 45, 60, 90]:
+    rad = math.radians(deg)
+    print(f"{deg:>3}°  {round(math.sin(rad), 4):<8} {round(math.cos(rad), 4)}")
+`,
+  },
+  {
+    id: "right-triangle",
+    title: "勾股定理",
+    emoji: "📐",
+    summary: "math.hypot",
+    categories: ["数学", "Turtle"],
+    keywords: ["math.hypot", "平方", "直角三角形", "sqrt"],
+    difficulty: 2,
+    learn: ["直角边的平方和等于斜边的平方", "`math.hypot(a, b)` 算斜边", "3、4、5 是一组直角三角形"],
+    explanation: [
+      "两条直角边是 3 和 4 的时候，斜边是 5：3²+4² = 9+16 = 25 = 5²。",
+      "`math.hypot(3, 4)` 就是在算这条斜边。画布上的边按同样的比例放大了，方便看。",
+    ],
+    code: `import math
+import turtle
+
+t = turtle.Turtle()
+t.color("chocolate")
+t.pensize(4)
+t.forward(160)
+t.left(90)
+t.forward(120)
+t.goto(0, 0)
+
+print("直角边 3 和 4")
+print("斜边", math.hypot(3, 4))
+print("平方和", 3 ** 2 + 4 ** 2)
 `,
   },
 ];

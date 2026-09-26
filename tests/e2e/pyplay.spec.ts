@@ -1,6 +1,30 @@
 import { expect, test } from "@playwright/test";
 import { inkPixels, load, runAndWait, shareUrl } from "./helpers";
 
+test("theme toggle switches to dark and is remembered", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("pyplay.theme", "light"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("#theme")).toHaveAttribute("aria-label", "切换到深色");
+  const lightBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+
+  await page.click("#theme");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("#theme")).toHaveAttribute("aria-label", "切换到浅色");
+  await expect(page.locator("#theme")).toHaveAttribute("aria-pressed", "true");
+  const darkBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(darkBg).not.toBe(lightBg);
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".cm-editor")).toBeVisible();
+
+  await page.evaluate(() => localStorage.setItem("pyplay.theme", "nope"));
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", /^(light|dark)$/);
+});
+
 test("page is cross-origin isolated (needed by full Python)", async ({ page }) => {
   await page.goto("/");
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
